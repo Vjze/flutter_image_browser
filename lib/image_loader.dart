@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:Flutter_Image_Browser/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'src/rust/api/simple.dart' as rust_api;
 
 class ImageBrowser extends StatefulWidget {
@@ -35,8 +34,6 @@ class _ImageBrowserState extends State<ImageBrowser> {
 
   // 选择文件夹并加载图片
   Future<void> _pickFolder() async {
-    // String? folderPath = rust_api.getPath();
-    // final res = rust_api.getPath();
     try {
       String? folderPath = rust_api.getPath();
       // rust_api.getPath();
@@ -99,7 +96,6 @@ class _ImageBrowserState extends State<ImageBrowser> {
         child: Column(
           children: [
             Expanded(
-              // child: KeyboardListener(
               child: InteractiveViewer(
                 panEnabled: true, // 启用拖动
                 boundaryMargin: EdgeInsets.all(20),
