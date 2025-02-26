@@ -21,23 +21,6 @@ pub fn get_path() -> anyhow::Result<String> {
         None => Err(anyhow::anyhow!("未选择文件夹")),
     }
 }
-// pub async fn get_data(p: String) -> Option<ImageInfo> {
-//     match Path::new(&p).file_name(){
-//         Some(file_name) => {
-//             let name = file_name.to_str().unwrap().to_string();
-//             let (width, height) = image::open(p.clone()).unwrap().dimensions();
-//             let info = ImageInfo {
-//                 name,
-//                 width,
-//                 height,
-//             };
-//             Some(info)
-//         },
-//         None => return None,
-//     }
-
-// }
-
 pub async fn get_image_info(path: String) -> Option<ImageInfo> {
     if let Some(file_name) = Path::new(&path).file_name() {
         if let Some(name) = file_name.to_str() {
@@ -73,20 +56,7 @@ pub async fn list_images(p: String) -> anyhow::Result<Vec<ImageInfo>> {
     }
     Ok(list)
 }
-// pub async fn list_images(p: String) -> anyhow::Result<Vec<String>> {
-//     let mut list = vec![];
-//     for path in walkdir::WalkDir::new(p)
-//         .into_iter()
-//         .filter_map(Result::ok)
-//         .filter(|e| is_image_file(e.file_name().to_str().unwrap().to_string()))
-//     {
-//         // let file_name = path.file_name().to_str().unwrap().to_string();
-//         let file_path = path.path().display().to_string();
 
-//         list.push(file_path);
-//     }
-//     Ok(list)
-// }
 fn is_image_file(f: String) -> bool {
     let images_exts: Vec<&str> = vec![
         ".png", ".jpeg", ".webp", ".pnm", ".ico", ".avif", ".jpg", ".gif", ".JPG", ".GIF", ".PNG",

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:Flutter_Image_Browser/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -34,41 +35,29 @@ class _ImageBrowserState extends State<ImageBrowser> {
 
   // 选择文件夹并加载图片
   Future<void> _pickFolder() async {
-    String? folderPath = rust_api.getPath();
-    if (folderPath.isNotEmpty) {
-      setState(() {
-        infos.clear();
-        currentIndex = 0;
-      });
-      try {
-        final loadinfos = await rust_api.listImages(p: folderPath);
+    // String? folderPath = rust_api.getPath();
+    // final res = rust_api.getPath();
+    try {
+      String? folderPath = rust_api.getPath();
+      // rust_api.getPath();
+      if (folderPath.isNotEmpty) {
         setState(() {
-          infos = loadinfos;
+          infos.clear();
+          currentIndex = 0;
         });
-        // if (infos.isNotEmpty) {
-        //   _loadImageInfo(); // 加载第一张图片的信息
-        // }
-      } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载图片失败: $e')));
+        try {
+          final loadinfos = await rust_api.listImages(p: folderPath);
+          setState(() {
+            infos = loadinfos;
+          });
+        } catch (e) {
+          showAlertDialog(context, "加载图片失败");
+        }
       }
+    } catch (e) {
+      showAlertDialog(context, "获取文件夹路径失败");
     }
   }
-
-  // Future<void> _loadImageInfo() async {
-  //   var path = paths[currentIndex];
-  //   try {
-  //     final info = await rust_api.getData(p: path);
-  //     setState(() {
-  //       image = info;
-  //     });
-  //   } catch (e) {
-  //     ScaffoldMessenger.of(
-  //       context,
-  //     ).showSnackBar(SnackBar(content: Text('加载图片信息失败: $e')));
-  //   }
-  // }
 
   // 上一张
   void _previousImage() {
@@ -77,7 +66,6 @@ class _ImageBrowserState extends State<ImageBrowser> {
         currentIndex--;
       });
     }
-    // _loadImageInfo();
   }
 
   // 下一张
@@ -87,7 +75,6 @@ class _ImageBrowserState extends State<ImageBrowser> {
         currentIndex++;
       });
     }
-    // _loadImageInfo();
   }
 
   @override
