@@ -77,7 +77,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 abstract class RustLibApi extends BaseApi {
   String crateApiSimpleGetPath();
 
-  double crateApiSimpleGetScanProgress();
+  Future<double> crateApiSimpleGetScanProgress();
 
   Future<void> crateApiSimpleInitApp();
 
@@ -115,12 +115,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "get_path", argNames: []);
 
   @override
-  double crateApiSimpleGetScanProgress() {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
+  Future<double> crateApiSimpleGetScanProgress() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_f_32,

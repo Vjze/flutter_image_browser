@@ -15,7 +15,7 @@ String getPath() => RustLib.instance.api.crateApiSimpleGetPath();
 Future<List<ImageInfo>> listImages({required String p}) =>
     RustLib.instance.api.crateApiSimpleListImages(p: p);
 
-double getScanProgress() =>
+Future<double> getScanProgress() =>
     RustLib.instance.api.crateApiSimpleGetScanProgress();
 
 class ImageInfo {

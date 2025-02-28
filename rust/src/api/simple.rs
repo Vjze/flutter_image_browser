@@ -53,7 +53,6 @@ lazy_static::lazy_static! {
     static ref SCAN_PROGRESS: Arc<Mutex<(usize, usize)>> = Arc::new(Mutex::new((0, 0))); // (scanned, total)
 }
 
-#[frb]
 pub async fn list_images(p: String) -> anyhow::Result<Vec<ImageInfo>> {
     let mut tasks = Vec::new();
     let semaphore = Arc::new(Semaphore::new(32)); // 限制并发
@@ -101,7 +100,6 @@ pub async fn list_images(p: String) -> anyhow::Result<Vec<ImageInfo>> {
     Ok(list)
 }
 
-#[frb(sync)]
 pub fn get_scan_progress() -> f32 {
     let progress = SCAN_PROGRESS.lock().unwrap();
     if progress.1 == 0 {

@@ -126,7 +126,6 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
   @override
   Widget build(BuildContext context) {
     if (isScanning) {
-      final progress = rust_api.getScanProgress(); // 直接调用同步函数
       return Scaffold(
         body: Center(
           child: Column(
@@ -136,15 +135,21 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
               const SizedBox(height: 20),
               const Text("正在扫描图片...", style: TextStyle(fontSize: 18)),
               const SizedBox(height: 20),
-              Column(
-                children: [
-                  Text("${progress.toStringAsFixed(1)}%"),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: 200,
-                    child: LinearProgressIndicator(value: progress / 100),
-                  ),
-                ],
+              FutureBuilder(
+                future: rust_api.getScanProgress(),
+                builder: (context, snapshot) {
+                  final progress = snapshot.data ?? 0.0;
+                  return Column(
+                    children: [
+                      Text("${progress.toStringAsFixed(1)}%"),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: 200,
+                        child: LinearProgressIndicator(value: progress / 100),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
