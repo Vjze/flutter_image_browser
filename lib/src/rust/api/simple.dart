@@ -7,13 +7,18 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `get_image_info`, `is_image_file`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `SCAN_PROGRESS`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `deref`, `fmt`, `initialize`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `SCAN_PROGRESS`, `SHOULD_STOP`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `deref`, `deref`, `fmt`, `initialize`, `initialize`
 
 String getPath() => RustLib.instance.api.crateApiSimpleGetPath();
 
-Future<List<ImageInfo>> listImages({required String p}) =>
-    RustLib.instance.api.crateApiSimpleListImages(p: p);
+Future<List<String>> scanImages({required String p}) =>
+    RustLib.instance.api.crateApiSimpleScanImages(p: p);
+
+Stream<ImageInfo> listImages({required List<String> paths}) =>
+    RustLib.instance.api.crateApiSimpleListImages(paths: paths);
+
+void stopScan() => RustLib.instance.api.crateApiSimpleStopScan();
 
 Future<double> getScanProgress() =>
     RustLib.instance.api.crateApiSimpleGetScanProgress();
