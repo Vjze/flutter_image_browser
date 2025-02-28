@@ -12,8 +12,6 @@ class ImageBrowser extends StatefulWidget {
 }
 
 class _ImageBrowserState extends State<ImageBrowser> {
-  // List<String> paths = [];
-  // rust_api.ImageInfo? image;
   List<rust_api.ImageInfo> infos = [];
   int currentIndex = 0;
   final FocusNode _focusNode = FocusNode();

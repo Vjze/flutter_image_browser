@@ -1,6 +1,7 @@
 use flutter_rust_bridge::frb;
-use image::{self, GenericImageView};
-use std::{path::Path, vec};
+use image::{self, GenericImageView, ImageReader};
+use tokio::sync::Semaphore;
+use std::{io::Cursor, path::Path, sync::Arc, vec};
 
 #[frb(init)]
 pub fn init_app() {
@@ -24,29 +25,34 @@ pub fn get_path() -> anyhow::Result<String> {
 pub async fn get_image_info(path: String) -> Option<ImageInfo> {
     if let Some(file_name) = Path::new(&path).file_name() {
         if let Some(name) = file_name.to_str() {
-            let (width, height) = image::open(path.clone()).unwrap().dimensions();
-            let info = ImageInfo {
+            let data = tokio::fs::read(&path).await.ok()?;
+            let img = ImageReader::new(Cursor::new(data))
+                .with_guessed_format()
+                .ok()?
+                .decode()
+                .ok()?;
+            return Some(ImageInfo {
                 path: path.clone(),
                 name: name.to_string(),
-                width,
-                height,
-            };
-            return Some(info);
+                width: img.width(),
+                height: img.height(),
+            });
         };
     }
     None
 }
 pub async fn list_images(p: String) -> anyhow::Result<Vec<ImageInfo>> {
     let mut tasks = vec![];
+     // 并行扫描
+     let semaphore = Arc::new(Semaphore::new(16)); // 限制并发
     for path in walkdir::WalkDir::new(p)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| is_image_file(e.file_name().to_str().unwrap().to_string()))
     {
-        // let file_name = path.file_name().to_str().unwrap().to_string();
+        let _permit = semaphore.clone().acquire_owned().await?;
         let file_path = path.path().display().to_string();
         tasks.push(tokio::spawn(async move { get_image_info(file_path).await }));
-        // list.push(file_path);
     }
     let mut list = vec![];
     for task in tasks {
