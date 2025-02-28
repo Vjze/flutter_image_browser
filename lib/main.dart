@@ -58,7 +58,6 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
   int totalImages = 0;
   StreamSubscription<rust_api.ImageInfo>? _subscription;
   Timer? _progressTimer;
-  List<String> paths = [];
   @override
   void initState() {
     super.initState();
@@ -87,8 +86,7 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
           isLoading = false;
         });
 
-        paths = await rust_api.scanImages(p: folderPath);
-        totalImages = paths.length;
+        totalImages = await rust_api.scanImages(p: folderPath);
         print("扫描完成，总数: $totalImages");
 
         setState(() {
@@ -103,7 +101,7 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
           setState(() {});
         });
         _subscription = rust_api
-            .listImages(paths: paths)
+            .listImages(p: folderPath, l: totalImages)
             .listen(
               (image) {
                 print("收到图片: ${image.path}");
@@ -244,6 +242,7 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
                         future: rust_api.getScanProgress(),
                         builder: (context, snapshot) {
                           final progress = snapshot.data ?? 0.0;
+                          print("进度: ${snapshot.data}");
                           return Row(
                             children: [
                               Text("读取中: ${progress.toStringAsFixed(1)}%"),

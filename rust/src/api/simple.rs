@@ -1,13 +1,13 @@
-use async_walkdir::WalkDir;
+use crate::frb_generated::StreamSink;
 use flutter_rust_bridge::frb;
 use image::ImageReader;
-use std::{io::Cursor, sync::Mutex};
+use std::io::Cursor;
 use std::path::Path;
-use tokio::sync::{mpsc, Semaphore};
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use tokio::sync::Semaphore;
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}, Mutex};
 use anyhow;
+use async_walkdir::WalkDir;
 use futures_lite::stream::StreamExt;
-use crate::frb_generated::StreamSink;
 
 #[frb(init)]
 pub fn init_app() {
@@ -50,81 +50,88 @@ async fn get_image_info(path: String) -> Option<ImageInfo> {
     }
     None
 }
-// 扫描阶段：收集图片路径并返回总数
-pub async fn scan_images(p: String) -> anyhow::Result<Vec<String>> {
-    let mut entries = WalkDir::new(p);
-    let mut paths = vec![];
-    loop {
-        match entries.next().await {
-            Some(Ok(entry)) => {
-                let path = entry.path().display().to_string();
-                let mut v = |p: String|{
-                    if is_image_file(p.clone()) {
-                        paths.push(p);
-                    }
-                };
-                v(path.clone())
-            },
-            Some(Err(e)) => {
-                eprintln!("error: {}", e);
-                break;
-            }
-            None => break,
-        }
-    }
-    Ok(paths)
-}
-// 添加停止跟踪器和进度跟踪器
+
 lazy_static::lazy_static! {
     static ref SHOULD_STOP: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref SCAN_PROGRESS: Arc<Mutex<(usize, usize)>> = Arc::new(Mutex::new((0, 0))); // (processed, total)
 }
 
-pub async fn list_images(paths: Vec<String>, sink: StreamSink<ImageInfo>) -> anyhow::Result<()> {
-    // 使用逻辑线程数设置并发
-    let concurrency = num_cpus::get(); // 获取 CPU 逻辑线程数
+// 扫描阶段：异步收集图片路径并返回总数
+
+pub async fn scan_images(p: String) -> anyhow::Result<u32> {
+    let mut entries = WalkDir::new(p);
+    let mut count = 0;
+    while let Some(entry) = entries.next().await {
+        match entry {
+            Ok(entry) => {
+                let path = entry.path().display().to_string();
+                if is_image_file(path) {
+                    count += 1;
+                }
+            }
+            Err(e) => {
+                eprintln!("扫描错误: {}", e);
+                break;
+            }
+        }
+    }
+    Ok(count)
+}
+
+// 读取阶段：加载图片并流式返回
+pub async fn list_images(p: String, l: u32, sink: StreamSink<ImageInfo>) -> anyhow::Result<()> {
+    let concurrency = num_cpus::get();
     let semaphore = Arc::new(Semaphore::new(concurrency));
-    let (tx, mut rx) = mpsc::channel::<String>(100); // 任务队列
+    let total = l as usize;
 
     // 初始化进度
     {
         let mut progress = SCAN_PROGRESS.lock().unwrap();
-        *progress = (0, paths.len());
+        *progress = (0, total);
     }
     SHOULD_STOP.store(false, Ordering::SeqCst);
-    // 将路径发送到任务队列
-    tokio::spawn(async move {
-        for file_path in paths {
-            if SHOULD_STOP.load(Ordering::SeqCst) {
-                println!("停止信号触发，退出文件分发");
-                break;
-            }
-            if tx.send(file_path).await.is_err() {
-                break; // 如果接收端关闭，退出
-            }
-        }
-    });
 
-    // 处理任务
-    while let Some(file_path) = rx.recv().await {
+    let mut entries = WalkDir::new(p);
+    let mut tasks = Vec::new();
+
+    while let Some(entry) = entries.next().await {
         if SHOULD_STOP.load(Ordering::SeqCst) {
             println!("停止信号触发，退出任务处理");
-            break; // 停止信号后退出
+            break;
         }
 
-        let permit = semaphore.clone().acquire_owned().await?;
-        let sink = sink.clone();
+        match entry {
+            Ok(entry) => {
+                let path = entry.path().display().to_string();
+                if is_image_file(path.clone()) {
+                    let permit = semaphore.clone().acquire_owned().await?;
+                    let sink = sink.clone();
 
-        tokio::spawn(async move {
-            if let Some(info) = get_image_info(file_path).await {
-                let _ = sink.add(info);
-                // 更新进度
-                let mut progress = SCAN_PROGRESS.lock().unwrap();
-                progress.0 += 1;
+                    let task = tokio::spawn(async move {
+                        if let Some(info) = get_image_info(path).await {
+                            let _ = sink.add(info);
+                        }
+                        drop(permit);
+                    });
+                    tasks.push(task);
+                }
             }
-            drop(permit); // 释放信号量
-        });
+            Err(e) => {
+                eprintln!("扫描错误: {}", e);
+                break;
+            }
+        }
     }
+
+    // 等待所有任务完成并更新进度
+    let mut processed = 0;
+    for task in tasks {
+        task.await?;
+        processed += 1;
+        let mut progress = SCAN_PROGRESS.lock().unwrap();
+        progress.0 = processed;
+    }
+
     // 重置进度
     {
         let mut progress = SCAN_PROGRESS.lock().unwrap();
@@ -137,6 +144,7 @@ pub async fn list_images(paths: Vec<String>, sink: StreamSink<ImageInfo>) -> any
 pub fn stop_scan() {
     SHOULD_STOP.store(true, Ordering::SeqCst);
 }
+
 pub fn get_scan_progress() -> f32 {
     let progress = SCAN_PROGRESS.lock().unwrap();
     if progress.1 == 0 {
@@ -145,6 +153,7 @@ pub fn get_scan_progress() -> f32 {
         (progress.0 as f32 / progress.1 as f32) * 100.0
     }
 }
+
 fn is_image_file(f: String) -> bool {
     let images_exts: Vec<&str> = vec![
         ".png", ".jpeg", ".webp", ".pnm", ".ico", ".avif", ".jpg", ".gif",

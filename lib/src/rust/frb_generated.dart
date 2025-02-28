@@ -81,9 +81,12 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiSimpleInitApp();
 
-  Stream<ImageInfo> crateApiSimpleListImages({required List<String> paths});
+  Stream<ImageInfo> crateApiSimpleListImages({
+    required String p,
+    required int l,
+  });
 
-  Future<List<String>> crateApiSimpleScanImages({required String p});
+  Future<int> crateApiSimpleScanImages({required String p});
 
   void crateApiSimpleStopScan();
 }
@@ -173,14 +176,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
   @override
-  Stream<ImageInfo> crateApiSimpleListImages({required List<String> paths}) {
+  Stream<ImageInfo> crateApiSimpleListImages({
+    required String p,
+    required int l,
+  }) {
     final sink = RustStreamSink<ImageInfo>();
     unawaited(
       handler.executeNormal(
         NormalTask(
           callFfi: (port_) {
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            sse_encode_list_String(paths, serializer);
+            sse_encode_String(p, serializer);
+            sse_encode_u_32(l, serializer);
             sse_encode_StreamSink_image_info_Sse(sink, serializer);
             pdeCallFfi(
               generalizedFrbRustBinding,
@@ -194,7 +201,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             decodeErrorData: sse_decode_AnyhowException,
           ),
           constMeta: kCrateApiSimpleListImagesConstMeta,
-          argValues: [paths, sink],
+          argValues: [p, l, sink],
           apiImpl: this,
         ),
       ),
@@ -204,11 +211,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiSimpleListImagesConstMeta => const TaskConstMeta(
     debugName: "list_images",
-    argNames: ["paths", "sink"],
+    argNames: ["p", "l", "sink"],
   );
 
   @override
-  Future<List<String>> crateApiSimpleScanImages({required String p}) {
+  Future<int> crateApiSimpleScanImages({required String p}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -222,7 +229,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_list_String,
+          decodeSuccessData: sse_decode_u_32,
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiSimpleScanImagesConstMeta,
@@ -296,12 +303,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  List<String> dco_decode_list_String(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_String).toList();
-  }
-
-  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
@@ -366,18 +367,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       width: var_width,
       height: var_height,
     );
-  }
-
-  @protected
-  List<String> sse_decode_list_String(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <String>[];
-    for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_String(deserializer));
-    }
-    return ans_;
   }
 
   @protected
@@ -461,15 +450,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.name, serializer);
     sse_encode_u_32(self.width, serializer);
     sse_encode_u_32(self.height, serializer);
-  }
-
-  @protected
-  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.length, serializer);
-    for (final item in self) {
-      sse_encode_String(item, serializer);
-    }
   }
 
   @protected

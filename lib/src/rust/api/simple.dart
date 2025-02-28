@@ -12,11 +12,11 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 String getPath() => RustLib.instance.api.crateApiSimpleGetPath();
 
-Future<List<String>> scanImages({required String p}) =>
+Future<int> scanImages({required String p}) =>
     RustLib.instance.api.crateApiSimpleScanImages(p: p);
 
-Stream<ImageInfo> listImages({required List<String> paths}) =>
-    RustLib.instance.api.crateApiSimpleListImages(paths: paths);
+Stream<ImageInfo> listImages({required String p, required int l}) =>
+    RustLib.instance.api.crateApiSimpleListImages(p: p, l: l);
 
 void stopScan() => RustLib.instance.api.crateApiSimpleStopScan();
 

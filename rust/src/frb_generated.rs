@@ -164,7 +164,8 @@ fn wire__crate__api__simple__list_images_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_paths = <Vec<String>>::sse_decode(&mut deserializer);
+            let api_p = <String>::sse_decode(&mut deserializer);
+            let api_l = <u32>::sse_decode(&mut deserializer);
             let api_sink = <StreamSink<
                 crate::api::simple::ImageInfo,
                 flutter_rust_bridge::for_generated::SseCodec,
@@ -174,7 +175,7 @@ fn wire__crate__api__simple__list_images_impl(
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
                         let output_ok =
-                            crate::api::simple::list_images(api_paths, api_sink).await?;
+                            crate::api::simple::list_images(api_p, api_l, api_sink).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -299,18 +300,6 @@ impl SseDecode for crate::api::simple::ImageInfo {
             width: var_width,
             height: var_height,
         };
-    }
-}
-
-impl SseDecode for Vec<String> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut len_ = <i32>::sse_decode(deserializer);
-        let mut ans_ = vec![];
-        for idx_ in 0..len_ {
-            ans_.push(<String>::sse_decode(deserializer));
-        }
-        return ans_;
     }
 }
 
@@ -450,16 +439,6 @@ impl SseEncode for crate::api::simple::ImageInfo {
         <String>::sse_encode(self.name, serializer);
         <u32>::sse_encode(self.width, serializer);
         <u32>::sse_encode(self.height, serializer);
-    }
-}
-
-impl SseEncode for Vec<String> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <i32>::sse_encode(self.len() as _, serializer);
-        for item in self {
-            <String>::sse_encode(item, serializer);
-        }
     }
 }
 
