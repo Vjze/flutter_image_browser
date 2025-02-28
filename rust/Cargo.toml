@@ -13,6 +13,7 @@ image = "0.25.5"
 walkdir = "2.5.0"
 rfd= "0.15.2"
 tokio ={ version = "1.43.0", features = ["full"] }
+lazy_static = {version = "1.5"}
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
