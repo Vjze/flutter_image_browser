@@ -22,22 +22,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
   @protected
+  RustStreamSink<ImageInfo> dco_decode_StreamSink_image_info_Sse(dynamic raw);
+
+  @protected
   String dco_decode_String(dynamic raw);
 
   @protected
-  ImageInfo dco_decode_box_autoadd_image_info(dynamic raw);
+  double dco_decode_f_32(dynamic raw);
 
   @protected
   ImageInfo dco_decode_image_info(dynamic raw);
 
   @protected
-  List<ImageInfo> dco_decode_list_image_info(dynamic raw);
+  List<String> dco_decode_list_String(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
-
-  @protected
-  ImageInfo? dco_decode_opt_box_autoadd_image_info(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -52,24 +52,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
+  RustStreamSink<ImageInfo> sse_decode_StreamSink_image_info_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
-  ImageInfo sse_decode_box_autoadd_image_info(SseDeserializer deserializer);
+  double sse_decode_f_32(SseDeserializer deserializer);
 
   @protected
   ImageInfo sse_decode_image_info(SseDeserializer deserializer);
 
   @protected
-  List<ImageInfo> sse_decode_list_image_info(SseDeserializer deserializer);
+  List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
-
-  @protected
-  ImageInfo? sse_decode_opt_box_autoadd_image_info(
-    SseDeserializer deserializer,
-  );
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -93,32 +93,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_image_info_Sse(
+    RustStreamSink<ImageInfo> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
-  void sse_encode_box_autoadd_image_info(
-    ImageInfo self,
-    SseSerializer serializer,
-  );
+  void sse_encode_f_32(double self, SseSerializer serializer);
 
   @protected
   void sse_encode_image_info(ImageInfo self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_image_info(
-    List<ImageInfo> self,
-    SseSerializer serializer,
-  );
+  void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_box_autoadd_image_info(
-    ImageInfo? self,
     SseSerializer serializer,
   );
 
