@@ -96,7 +96,6 @@ pub async fn list_images(p: String, l: u32, sink: StreamSink<ImageInfo>) -> anyh
 
     while let Some(entry) = entries.next().await {
         if SHOULD_STOP.load(Ordering::SeqCst) {
-            println!("停止信号触发，退出任务处理");
             break;
         }
 

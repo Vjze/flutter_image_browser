@@ -127,7 +127,6 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
         });
 
         totalImages = await rust_api.scanImages(p: folderPath);
-        print("扫描完成，总数: $totalImages");
 
         setState(() {
           isScanning = false;
@@ -144,20 +143,17 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
             .listImages(p: folderPath, l: totalImages)
             .listen(
               (image) {
-                print("收到图片: ${image.path}");
                 setState(() {
                   infos.add(image);
                 });
               },
               onDone: () {
-                print("加载完成，总数: ${infos.length}");
                 _progressTimer?.cancel();
                 setState(() {
                   isLoading = false;
                 });
               },
               onError: (e) {
-                print("加载错误: $e");
                 _progressTimer?.cancel();
                 setState(() {
                   isLoading = false;
@@ -172,7 +168,6 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
   }
 
   void _stopScan() {
-    print("停止扫描触发");
     rust_api.stopScan();
     _subscription?.cancel();
     _progressTimer?.cancel();
@@ -186,6 +181,10 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
       setState(() {
         currentIndex--;
       });
+    } else if (currentIndex == 0) {
+      setState(() {
+        currentIndex = infos.length - 1;
+      });
     }
   }
 
@@ -194,31 +193,40 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
       setState(() {
         currentIndex++;
       });
+    } else if (currentIndex == infos.length - 1) {
+      setState(() {
+        currentIndex = 0;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: KeyboardListener(
-              focusNode: _focusNode,
-              onKeyEvent: (event) {
-                if (event is KeyDownEvent) {
-                  if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                    _previousImage();
-                  } else if (event.logicalKey ==
-                      LogicalKeyboardKey.arrowRight) {
-                    _nextImage();
-                  } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                    _nextImage();
-                  } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                    _previousImage();
-                  }
-                }
-              },
+      body: Focus(
+        // 确保焦点停留在整个页面，而不是按钮上
+        focusNode: _focusNode,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+              _previousImage();
+              return KeyEventResult.handled; // 表示已处理
+            } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+              _nextImage();
+              return KeyEventResult.handled;
+            } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+              _nextImage();
+              return KeyEventResult.handled;
+            } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+              _previousImage();
+              return KeyEventResult.handled;
+            }
+          }
+          return KeyEventResult.ignored; // 未处理的事件交给其他控件
+        },
+        child: Column(
+          children: [
+            Expanded(
               child: InteractiveViewer(
                 panEnabled: true,
                 boundaryMargin: const EdgeInsets.all(20),
@@ -235,69 +243,69 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
                 ),
               ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(8.0),
-            color: Colors.grey[200],
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    ElevatedButton(
-                      onPressed: _pickFolder,
-                      child: const Text('选择文件夹'),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _previousImage,
-                      child: const Text('上一张'),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _nextImage,
-                      child: const Text('下一张'),
-                    ),
-                    const SizedBox(width: 8),
-                    if (isScanning) const Text("扫描中..."),
-                    if (isLoading)
-                      FutureBuilder<double>(
-                        future: rust_api.getScanProgress(),
-                        builder: (context, snapshot) {
-                          final progress = snapshot.data ?? 0.0;
-                          print("进度: ${snapshot.data}");
-                          return Row(
-                            children: [
-                              Text("读取中: ${progress.toStringAsFixed(1)}%"),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                width: 100,
-                                child: LinearProgressIndicator(
-                                  value: progress / 100,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: _stopScan,
-                                child: const Text("停止扫描"),
-                              ),
-                            ],
-                          );
-                        },
+            Container(
+              padding: const EdgeInsets.all(8.0),
+              color: Colors.grey[200],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      ElevatedButton(
+                        onPressed: _pickFolder,
+                        child: const Text('选择文件夹'),
                       ),
-                  ],
-                ),
-                if (totalImages > 0 || infos.isNotEmpty)
-                  Text(
-                    '文件名: ${infos.isEmpty ? "未加载" : infos[currentIndex].name} | '
-                    '分辨率: ${infos.isEmpty ? "未加载" : "${infos[currentIndex].width}x${infos[currentIndex].height}"} | '
-                    '当前: ${infos.isEmpty ? 0 : currentIndex + 1}/$totalImages',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _previousImage,
+                        child: const Text('上一张'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _nextImage,
+                        child: const Text('下一张'),
+                      ),
+                      const SizedBox(width: 8),
+                      if (isScanning) const Text("扫描中..."),
+                      if (isLoading)
+                        FutureBuilder<double>(
+                          future: rust_api.getScanProgress(),
+                          builder: (context, snapshot) {
+                            final progress = snapshot.data ?? 0.0;
+                            print("进度: ${snapshot.data}");
+                            return Row(
+                              children: [
+                                Text("读取中: ${progress.toStringAsFixed(1)}%"),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  width: 100,
+                                  child: LinearProgressIndicator(
+                                    value: progress / 100,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  onPressed: _stopScan,
+                                  child: const Text("停止扫描"),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                    ],
                   ),
-              ],
+                  if (totalImages > 0 || infos.isNotEmpty)
+                    Text(
+                      '文件名: ${infos.isEmpty ? "未加载" : infos[currentIndex].name} | '
+                      '分辨率: ${infos.isEmpty ? "未加载" : "${infos[currentIndex].width}x${infos[currentIndex].height}"} | '
+                      '当前: ${infos.isEmpty ? 0 : currentIndex + 1}/$totalImages',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
