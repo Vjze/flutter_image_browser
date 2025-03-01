@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:Flutter_Image_Browser/dialog.dart';
+import 'package:Flutter_Image_Browser/download_dialog.dart';
+import 'package:Flutter_Image_Browser/src/rust/api/check_version.dart';
 import 'package:Flutter_Image_Browser/updata_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +14,8 @@ Future<void> main() async {
   await RustLib.init();
   runApp(const MyApp());
 }
+
+late final downloadpath;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -66,7 +71,7 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
-    checkUpdate(context);
+    _checkForUpdate();
   }
 
   @override
@@ -77,6 +82,38 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
     super.dispose();
   }
 
+  Future<void> _checkForUpdate() async {
+    try {
+      final updateInfo = await checkUpdate();
+      if (updateInfo != null) {
+        showDialog(
+          context: context,
+          builder:
+              (_) => UpdateDialog(
+                updateInfo: updateInfo,
+                onDownload: () => _showDownloadDialog(updateInfo),
+              ),
+        );
+      }
+    } catch (e) {
+      showAlertDialog(context, "版本检测失败，请检查网络.");
+    }
+  }
+
+  void _showDownloadDialog(UpdateInfo updateInfo) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (_) => DownloadProgressDialog(
+            updateInfo: updateInfo,
+            onInstall: () => installUpdate(filePath: downloadpath),
+          ),
+    );
+  }
+
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  BuildContext get globalContext => navigatorKey.currentState!.overlay!.context;
   Future<void> _pickFolder() async {
     try {
       String? folderPath = rust_api.getPath();
@@ -125,12 +162,12 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
                 setState(() {
                   isLoading = false;
                 });
-                _showAlertDialog("加载图片失败: $e");
+                showAlertDialog(context, "加载图片失败");
               },
             );
       }
     } catch (e) {
-      _showAlertDialog("获取文件夹路径失败: $e");
+      showAlertDialog(context, "获取文件夹路径失败");
     }
   }
 
@@ -158,23 +195,6 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
         currentIndex++;
       });
     }
-  }
-
-  void _showAlertDialog(String message) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text("错误"),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("确定"),
-              ),
-            ],
-          ),
-    );
   }
 
   @override

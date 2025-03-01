@@ -1,47 +1,38 @@
+import 'package:Flutter_Image_Browser/src/rust/api/check_version.dart';
 import 'package:flutter/material.dart';
-import 'package:Flutter_Image_Browser/src/rust/api/check_version.dart' as api;
 
-void checkUpdate(BuildContext context) async {
-  final currentVersion = "1.0.4";
-  final result = await api.checkUpdate(currentVersion: currentVersion);
+class UpdateDialog extends StatelessWidget {
+  final UpdateInfo updateInfo;
+  final VoidCallback onDownload;
 
-  if (result != null) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text("发现新版本 ${result.version}"),
-            content: Text(result.changelog),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text("忽略"),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  downloadAndInstall(context, result);
-                },
-                child: Text("立即更新"),
-              ),
-            ],
-          ),
+  const UpdateDialog({
+    super.key,
+    required this.updateInfo,
+    required this.onDownload,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: SizedBox(
+        height: 30,
+        child: Center(child: Text('发现新版本 ${updateInfo.version}')),
+      ),
+      content: SizedBox(height: 100, child: Text(updateInfo.changelog)),
+      actions: [
+        Text("发布日期:${updateInfo.date}"),
+        TextButton(
+          onPressed: Navigator.of(context).pop,
+          child: const Text('取消'),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            onDownload();
+          },
+          child: const Text('下载更新'),
+        ),
+      ],
     );
-  } else {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text("已是最新版本")));
-  }
-}
-
-void downloadAndInstall(BuildContext context, api.UpdateInfo updateInfo) async {
-  final success = await api.downloadAndInstall(updateInfo: updateInfo);
-
-  if (success) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text("更新下载完成，正在启动安装程序")));
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("更新失败")));
   }
 }

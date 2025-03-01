@@ -5,33 +5,88 @@
 
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+part 'check_version.freezed.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Platform`, `UpdateInfos`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
-Future<UpdateInfo?> checkUpdate({required String currentVersion}) => RustLib
-    .instance
-    .api
-    .crateApiCheckVersionCheckUpdate(currentVersion: currentVersion);
+Future<UpdateInfo?> checkUpdate() =>
+    RustLib.instance.api.crateApiCheckVersionCheckUpdate();
 
-Future<bool> downloadAndInstall({required UpdateInfo updateInfo}) => RustLib
-    .instance
-    .api
-    .crateApiCheckVersionDownloadAndInstall(updateInfo: updateInfo);
+Stream<DownloadEvent> downloadUpdate({
+  required String url,
+  required String destPath,
+}) => RustLib.instance.api.crateApiCheckVersionDownloadUpdate(
+  url: url,
+  destPath: destPath,
+);
+
+Future<void> installUpdate({required String filePath}) =>
+    RustLib.instance.api.crateApiCheckVersionInstallUpdate(filePath: filePath);
+
+@freezed
+sealed class DownloadEvent with _$DownloadEvent {
+  const DownloadEvent._();
+
+  const factory DownloadEvent.progress(DownloadProgress field0) =
+      DownloadEvent_Progress;
+  const factory DownloadEvent.error(String field0) = DownloadEvent_Error;
+}
+
+class DownloadProgress {
+  final BigInt downloadedBytes;
+  final BigInt totalBytes;
+  final double speed;
+  final double progress;
+
+  const DownloadProgress({
+    required this.downloadedBytes,
+    required this.totalBytes,
+    required this.speed,
+    required this.progress,
+  });
+
+  @override
+  int get hashCode =>
+      downloadedBytes.hashCode ^
+      totalBytes.hashCode ^
+      speed.hashCode ^
+      progress.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DownloadProgress &&
+          runtimeType == other.runtimeType &&
+          downloadedBytes == other.downloadedBytes &&
+          totalBytes == other.totalBytes &&
+          speed == other.speed &&
+          progress == other.progress;
+}
 
 class UpdateInfo {
   final String version;
   final String changelog;
   final String downloadUrl;
+  final String fileName;
+  final String date;
 
   const UpdateInfo({
     required this.version,
     required this.changelog,
     required this.downloadUrl,
+    required this.fileName,
+    required this.date,
   });
 
   @override
   int get hashCode =>
-      version.hashCode ^ changelog.hashCode ^ downloadUrl.hashCode;
+      version.hashCode ^
+      changelog.hashCode ^
+      downloadUrl.hashCode ^
+      fileName.hashCode ^
+      date.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -40,5 +95,7 @@ class UpdateInfo {
           runtimeType == other.runtimeType &&
           version == other.version &&
           changelog == other.changelog &&
-          downloadUrl == other.downloadUrl;
+          downloadUrl == other.downloadUrl &&
+          fileName == other.fileName &&
+          date == other.date;
 }
