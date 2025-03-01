@@ -1,7 +1,7 @@
 use futures_lite::StreamExt as _;
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::{env, fs::File, io::Write, path::Path, process::Command, time::Instant};
+use std::process::{self, Command};
+use tokio::{fs::File, io::AsyncWriteExt as _};
 
 use crate::frb_generated::StreamSink;
 
@@ -93,7 +93,7 @@ pub async fn download_update(
     let total_size = response.content_length().unwrap_or(0);
     let path = std::path::Path::new(&dest_path);
 
-    let mut file = match std::fs::File::create(&path) {
+    let mut file = match File::create(&path).await {
         Ok(f) => f,
         Err(e) => {
             let _ = progress_sink.add(DownloadEvent::Error(format!("文件创建失败: {e}")));
@@ -114,7 +114,7 @@ pub async fn download_update(
             }
         };
 
-        if let Err(e) = file.write_all(&chunk) {
+        if let Err(e) = file.write_all(&chunk).await {
             let _ = progress_sink.add(DownloadEvent::Error(format!("文件写入失败: {e}")));
             return Err(e.into());
         }
@@ -154,5 +154,5 @@ pub fn install_update(file_path: String) -> anyhow::Result<()> {
     #[cfg(target_os = "linux")]
     Command::new("sh").arg(file_path).spawn()?;
 
-    Ok(())
+    process::exit(0)
 }
