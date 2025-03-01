@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+
+import 'package:Flutter_Image_Browser/updata_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:Flutter_Image_Browser/src/rust/api/simple.dart' as rust_api;
@@ -64,6 +66,7 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
+    checkUpdate(context);
   }
 
   @override
