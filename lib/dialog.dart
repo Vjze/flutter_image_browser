@@ -5,7 +5,7 @@ void showAlertDialog(context, String message) {
     context: context,
     builder:
         (context) => AlertDialog(
-          title: const Text("错误"),
+          title: const Text("提示"),
           content: Text(message),
           actions: [
             TextButton(

@@ -41,7 +41,6 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
   }
 
   void _startDownload() async {
-    // final filePath = '/path/to/download/${widget.updateInfo.fileName}';
     final filePath = await _getDownloadPath(widget.updateInfo.fileName);
 
     setState(() {
@@ -119,7 +118,6 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
         }
       },
       onDone: () {
-        print("Stream onDone");
         if (progress >= 1.0 && mounted && !_hasError) {
           Navigator.of(context).pop();
           downloadpath = filePath;
@@ -129,15 +127,13 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
               builder:
                   (context) => AlertDialog(
                     title: const Text('下载完成'),
-                    content: Text('软件已下载完成，位置是:$filePath'),
+                    content: Text('软件已下载完成，位置是:$filePath /n点击确定开始安装'),
                     actions: [
                       TextButton(
                         onPressed: () {
-                          print("點擊確定，开始安装");
                           widget.onInstall();
                           Navigator.of(context).pop();
                           if (Navigator.of(context).canPop()) {
-                            print("關閉父層彈窗");
                             Navigator.of(context).pop();
                           }
                         },
@@ -148,12 +144,10 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
             );
           });
 
-          print("下载完成,下载位置是:$filePath");
           Navigator.of(context).pop();
         }
       },
       onError: (e) {
-        print("Stream onError: $e");
         setState(() {
           _isDownloading = false;
           _hasError = true;
@@ -169,7 +163,6 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
                   actions: [
                     TextButton(
                       onPressed: () {
-                        print("點擊確定，關閉錯誤彈窗 (onError)");
                         Navigator.of(context).pop();
                         if (Navigator.of(context).canPop()) {
                           Navigator.of(context).pop();
@@ -186,8 +179,6 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
   }
 
   Future<String> _getDownloadPath(String fileName) async {
-    // final dir = await getApplicationDocumentsDirectory();
-    // return "${dir.path}/$fileName";
     final dir = Directory.current; // 當前工作目錄
     return p.join(dir.path, fileName);
   }
