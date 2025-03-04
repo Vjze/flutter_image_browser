@@ -1,9 +1,10 @@
+use crate::frb_generated::StreamSink;
 use futures_lite::StreamExt as _;
 use serde::{Deserialize, Serialize};
-use std::process::{self, Command};
+use std::fs;
+use std::path::Path;
+use std::process::{self, Command, Stdio};
 use tokio::{fs::File, io::AsyncWriteExt as _};
-
-use crate::frb_generated::StreamSink;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UpdateInfo {
@@ -142,17 +143,133 @@ pub async fn download_update(
 
     Ok(())
 }
+pub fn close_old_app() -> anyhow::Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = Command::new("taskkill");
+        cmd.arg("/F").arg("/IM").arg("my_app.exe").spawn()?.wait()?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let app_name = "my_app"; // 你的App名字
+        let script = format!(r#"tell application "{}" to quit"#, app_name);
 
+        Command::new("osascript")
+            .arg("-e")
+            .arg(script)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .expect("Failed to close old app");
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let mut cmd = Command::new("killall");
+        cmd.arg("my_app").spawn()?.wait()?;
+    }
+    Ok(())
+}
+pub fn launch_new_app() -> anyhow::Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = Command::new("cmd");
+        cmd.arg("/c")
+            .arg("start")
+            .arg("my_app.exe")
+            .spawn()?
+            .wait()?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let mut cmd = Command::new("open");
+        cmd.arg("/Applications/my_app.app").spawn()?.wait()?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let mut cmd = Command::new("sh");
+        cmd.arg("my_app").spawn()?.wait()?;
+    }
+    process::exit(0);
+}
+pub fn update_linux(file_path: String) -> anyhow::Result<()> {
+    let _ = close_old_app();
+    let _ = replace_appimage(&file_path);
+    launch_new_app()
+}
+pub fn replace_appimage(new_appimage_path: &str) -> anyhow::Result<()> {
+    #[cfg(target_os = "linux")]
+    {
+        let target_path = "~/.local/bin/MyApp.AppImage"; // 根据你的项目实际路径修改
+        std::fs::copy(new_appimage_path, target_path).expect("Failed to replace AppImage");
+        std::process::Command::new("chmod")
+            .args(["+x", target_path])
+            .status()
+            .expect("Failed to make AppImage executable");
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let app_path = "/Applications/my_app.app";
+        let new_app_path = format!("{}/my_app.app", new_appimage_path);
+
+        if Path::new(app_path).exists() {
+            fs::remove_dir_all(app_path).expect("Failed to remove old app");
+        }
+
+        Command::new("cp")
+            .args(["-r", &new_app_path, app_path])
+            .status()
+            .expect("Failed to copy new app");
+    }
+    launch_new_app()
+}
+pub fn update_windows(file_path: &str) -> anyhow::Result<()> {
+    let _ = close_old_app();
+    let _ = run_installer(file_path);
+    launch_new_app()
+}
+pub fn run_installer(installer_path: &str) {
+    Command::new(installer_path)
+        .spawn()
+        .expect("Failed to run installer");
+}
+pub fn mount_dmg(dmg_path: &str) -> String {
+    let output = Command::new("hdiutil")
+        .args(["attach", dmg_path])
+        .output()
+        .expect("Failed to mount dmg");
+
+    let output_str = String::from_utf8_lossy(&output.stdout);
+    for line in output_str.lines() {
+        if line.contains("/Volumes/") {
+            let mount_point = line.split('\t').last().unwrap_or("").trim().to_string();
+            return mount_point;
+        }
+    }
+
+    panic!("Failed to find mount point");
+}
+pub fn unmount_dmg(mount_point: &str) {
+    Command::new("hdiutil")
+        .args(["detach", mount_point])
+        .status()
+        .expect("Failed to unmount dmg");
+}
+pub fn update_macos(dmg_path: &str) -> anyhow::Result<()> {
+    let _ = close_old_app();
+    let mount_point = mount_dmg(dmg_path);
+    let _ = replace_appimage(&mount_point);
+    let _ = unmount_dmg(&mount_point);
+    launch_new_app()
+}
 // 安装更新（执行安装包）
 pub fn install_update(file_path: String) -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]
-    Command::new("cmd").arg("/c").arg(file_path).spawn()?;
+    let _ = update_windows(&file_path);
 
     #[cfg(target_os = "macos")]
-    Command::new("open").arg(file_path).spawn()?;
+    let _ = update_macos(&file_path);
 
     #[cfg(target_os = "linux")]
-    Command::new("sh").arg(file_path).spawn()?;
-
-    process::exit(0)
+    let _ = undate_linux(file_path);
+    Ok(())
 }
