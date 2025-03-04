@@ -87,6 +87,7 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
 
           Future.microtask(() {
             showDialog(
+              barrierDismissible: false,
               context: context,
               builder:
                   (context) => AlertDialog(
@@ -116,6 +117,7 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
           fileName = widget.updateInfo.fileName;
           Future.microtask(() {
             showDialog(
+              barrierDismissible: false,
               context: context,
               builder:
                   (context) => AlertDialog(
@@ -149,6 +151,7 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
         Future.microtask(() {
           showDialog(
             context: context,
+            barrierDismissible: false,
             builder:
                 (context) => AlertDialog(
                   title: const Text('下載失敗'),
