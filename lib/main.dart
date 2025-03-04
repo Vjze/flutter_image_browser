@@ -15,7 +15,7 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-late final downloadpath;
+late final fileName;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -107,7 +107,7 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
       builder:
           (_) => DownloadProgressDialog(
             updateInfo: updateInfo,
-            onInstall: () => installUpdate(filePath: downloadpath),
+            onInstall: () => installUpdate(fileName: fileName),
           ),
     );
   }

@@ -1,12 +1,13 @@
 use crate::frb_generated::StreamSink;
 use futures_lite::StreamExt as _;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 use std::ascii::AsciiExt;
-use std::fs;
-use std::path::Path;
+use std::{env, fs};
+use std::path::{Path, PathBuf};
 use std::process::{self, Command, Stdio};
-use std::thread::sleep;
-use std::time::Duration;
+use flate2::read::GzDecoder;
+use zip::ZipWriter;
+use zip::write::FileOptions;
 use tokio::{fs::File, io::AsyncWriteExt as _};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -79,13 +80,31 @@ pub async fn check_update() -> anyhow::Result<Option<UpdateInfo>> {
         Ok(None)
     }
 }
+fn get_downloads_path() -> PathBuf {
+    // 获取当前用户的主目录
+    let home_dir = env::var("HOME") // Linux/macOS
+        .or_else(|_| env::var("USERPROFILE")) // Windows
+        .expect("无法获取用户主目录");
 
+    // 拼接 Downloads 路径
+    let mut downloads_path = PathBuf::from(home_dir);
+    downloads_path.push("Downloads");
+
+    // 如果 Downloads 文件夹不存在，创建它
+    if !downloads_path.exists() {
+        fs::create_dir_all(&downloads_path).expect("无法创建 Downloads 文件夹");
+    }
+
+    downloads_path
+}
 // 下载更新文件（带进度回传）
 pub async fn download_update(
     url: String,
-    dest_path: String,
+    file_name: String,
     progress_sink: StreamSink<DownloadEvent>,
 ) -> anyhow::Result<()> {
+    let mut file_path = get_downloads_path();
+    file_path.push(file_name);
     let client = reqwest::Client::new();
     let response = match client.get(&url).send().await {
         Ok(r) => r,
@@ -94,9 +113,9 @@ pub async fn download_update(
             return Err(e.into());
         }
     };
-
+    
     let total_size = response.content_length().unwrap_or(0);
-    let path = std::path::Path::new(&dest_path);
+    let path = std::path::Path::new(&file_path);
 
     let mut file = match File::create(&path).await {
         Ok(f) => f,
@@ -144,68 +163,40 @@ pub async fn download_update(
             progress,
         }));
     }
-
-    Ok(())
-}
-pub fn close_old_app() -> anyhow::Result<()> {
-    #[cfg(target_os = "windows")]
-    {
-        let mut cmd = Command::new("taskkill");
-        cmd.arg("/F").arg("/IM").arg("my_app.exe").spawn()?.wait()?;
-    }
-    #[cfg(target_os = "macos")]
-    {
-        let app_name = "my_app"; // 你的App名字
-        let script = format!(r#"tell application "{}" to quit"#, app_name);
-
-        Command::new("osascript")
-            .arg("-e")
-            .arg(script)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .expect("Failed to close old app");
-    }
-    #[cfg(target_os = "linux")]
-    {
-        let mut cmd = Command::new("killall");
-        cmd.arg("my_app").spawn()?.wait()?;
-    }
     Ok(())
 }
 
-pub fn replace_appimage(new_appimage_path: &str) -> anyhow::Result<()> {
-    #[cfg(target_os = "linux")]
-    {
-        let target_path = shellexpand::tilde("~/.local/bin/MyApp.AppImage").to_string();
-        if Path::new(&target_path).exists() {
-            std::fs::remove_file(&target_path)?;
-        }
-        std::fs::copy(new_appimage_path, &target_path)?;
-        std::process::Command::new("chmod")
-            .args(["+x", &target_path])
-            .status()?;
+async fn unzip_file(zip_path: &Path) -> anyhow::Result<PathBuf> {
+    let dest_folder = zip_path.with_extension(""); // 创建一个与 ZIP 同名的文件夹作为解压目录
+    if !dest_folder.exists() {
+        fs::create_dir_all(&dest_folder)?;
     }
-    #[cfg(target_os = "macos")]
-    {
-        let app_path = "/Applications/my_app.app";
-        let new_app_path = format!("{}/my_app.app", new_appimage_path);
 
-        if !Path::new(&new_app_path).exists() {
-            return Err(anyhow::anyhow!("New app not found at {}", new_app_path));
+    let file = std::fs::File::open(zip_path)?;
+    let mut archive = zip::ZipArchive::new(file)?;
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let file_path = dest_folder.join(file.name());
+
+        if file.name().ends_with('/') {
+            fs::create_dir_all(&file_path)?;
+        } else {
+            if let Some(parent) = file_path.parent() {
+                if !parent.exists() {
+                    fs::create_dir_all(parent)?;
+                }
+            }
+            let mut output = std::fs::File::create(&file_path)?;
+            std::io::copy(&mut file, &mut output)?;
         }
-
-        if Path::new(app_path).exists() {
-            fs::remove_dir_all(app_path)?;
-        }
-
-        Command::new("cp")
-            .args(["-r", &new_app_path, app_path])
-            .status()
-            .map_err(|e| anyhow::anyhow!("Failed to copy new app: {}", e))?;
     }
-    Ok(())
+
+    Ok(dest_folder)
 }
+
+
+
 
 pub fn run_installer(installer_path: &str) -> anyhow::Result<()> {
     Command::new(installer_path)
@@ -213,82 +204,68 @@ pub fn run_installer(installer_path: &str) -> anyhow::Result<()> {
         .expect("Failed to run installer");
     process::exit(0)
 }
-pub fn mount_dmg(dmg_path: &str) -> anyhow::Result<String> {
-    let output = Command::new("hdiutil")
-        .args(["attach", dmg_path])
-        .output()
-        .map_err(|e| anyhow::anyhow!("Failed to mount dmg: {}", e))?;
-
-    let output_str = String::from_utf8_lossy(&output.stdout);
-    for line in output_str.lines() {
-        if line.contains("/Volumes/") {
-            let mount_point = line.split('\t').last().unwrap_or("").trim().to_string();
-            return Ok(mount_point);
-        }
-    }
-    Err(anyhow::anyhow!("Failed to find mount point"))
-}
-pub fn unmount_dmg(mount_point: &str) {
-    Command::new("hdiutil")
-        .args(["detach", mount_point])
-        .status()
-        .expect("Failed to unmount dmg");
-}
 
 // 安装更新（执行安装包）
-pub fn install_update(file_path: String) -> anyhow::Result<()> {
+pub async fn install_update(file_name: String) -> anyhow::Result<()> {
+    let mut file_path = get_downloads_path();
+    file_path.push(file_name);
     #[cfg(target_os = "windows")]
-    run_installer(&file_path)?;
-    close_old_app()?;
-    Command::new("cmd")
-        .arg("/c")
-        .arg("start")
-        .arg("my_app.exe")
-        .spawn()?
-        .wait()?;
+    {   
+        
+        run_installer(file_path.display().to_string())?;
+        let mut cmd = Command::new("taskkill");
+        cmd.arg("/F").arg("/IM").arg("my_app.exe").spawn()?.wait()?;
+        Command::new("cmd")
+            .arg("/c")
+            .arg("start")
+            .arg("my_app.exe")
+            .spawn()?
+            .wait()?;}
 
     #[cfg(target_os = "macos")]
     {  // 启动新的进程来进行替换操作和启动新应用
-        launch_update_process(file_path);
+        println!("path = {}", file_path.display().to_string());
+        // unzip_file(&file_path);
+        launch_update_process(file_path).await?;
     }
 
     #[cfg(target_os = "linux")]
-    {
-        replace_appimage(&file_path)?;
-        close_old_app()?;
+    {   close_old_app()?;
+        // replace_appimage(&file_path.display().to_string())?;
+        
         let app_path = shellexpand::tilde("~/.local/bin/MyApp.AppImage").to_string();
         Command::new(&app_path).spawn()?.wait()?;
     }
 
     process::exit(0)
 }
-pub fn launch_update_process(new_appimage_path: String) -> anyhow::Result<()> {
-    // 启动一个新的进程来执行后续任务
-    std::thread::spawn(move || {
-        // 关闭旧应用
-        if let Err(e) = close_old_app() {
-            eprintln!("Error closing old app: {}", e);
-            return;
-        }
+async fn launch_update_process(new_zip_path: PathBuf) -> anyhow::Result<()> {
+    // 解压 ZIP 文件并返回解压后的文件夹路径
+    let dest_folder= unzip_file(Path::new(&new_zip_path)).await?;
 
-        // 等待旧应用退出
-        sleep(Duration::from_secs(2));
-        let mount_point = mount_dmg(&new_appimage_path).unwrap();
-        // 处理替换和安装操作
-        if let Err(e) = replace_appimage(&mount_point) {
-            eprintln!("Error replacing app image: {}", e);
-            return;
+    // 获取解压后的文件夹路径
+    let update_script = dest_folder.join("update.sh");
+    println!("检查脚本路径: {:?}", update_script); // 输出脚本路径
+
+    if !update_script.exists() {
+        return Err(anyhow::anyhow!("找不到 update.sh 脚本"));
+    }
+
+    // 执行 update.sh 脚本
+    let status = Command::new("sh")
+        .arg(update_script)
+        .current_dir(dest_folder) // 进入解压后的文件夹
+        .spawn();
+
+    match status {
+        Ok(_) => {
+            println!("Update process started.");
         }
-        unmount_dmg(&mount_point);
-        // 启动新的应用
-        if let Err(e) = Command::new("open")
-            .arg("/Applications/my_app.app")
-            .spawn()
-            {
-            eprintln!("Failed to start new app: {}", e);
+        Err(e) => {
+            eprintln!("Failed to start update process: {}", e);
         }
-    });
+    }
 
     // 退出当前程序
-    std::process::exit(0);
+    process::exit(0); // 退出当前程序
 }

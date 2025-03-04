@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:Flutter_Image_Browser/main.dart';
-import 'package:path/path.dart' as p;
 import 'package:Flutter_Image_Browser/src/rust/api/check_version.dart';
 import 'package:flutter/material.dart';
 
@@ -41,7 +39,6 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
   }
 
   void _startDownload() async {
-    final filePath = await _getDownloadPath(widget.updateInfo.fileName);
 
     setState(() {
       _isDownloading = true;
@@ -69,21 +66,17 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
 
     _progressSubscription = downloadUpdate(
       url: widget.updateInfo.downloadUrl,
-      destPath: filePath,
+      fileName: widget.updateInfo.fileName,
     ).listen(
       (event) {
-        print("收到事件: $event");
         if (event is DownloadEvent_Progress) {
-          print("監聽到進度事件");
           final progressData = event.field0;
           setState(() {
             progress = progressData.progress;
             speed = '${progressData.speed.toStringAsFixed(2)} KB/s';
           });
         } else if (event is DownloadEvent_Error) {
-          print("監聽到錯誤事件");
           final errorMessage = event.field0;
-          print("errorMessage = $errorMessage");
 
           setState(() {
             _isDownloading = false;
@@ -120,14 +113,14 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
       onDone: () {
         if (progress >= 1.0 && mounted && !_hasError) {
           Navigator.of(context).pop();
-          downloadpath = filePath;
+          fileName = widget.updateInfo.fileName;
           Future.microtask(() {
             showDialog(
               context: context,
               builder:
                   (context) => AlertDialog(
                     title: const Text('下载完成'),
-                    content: Text('软件已下载完成，位置是:$filePath /n点击确定开始安装'),
+                    content: Text('软件已下载完成，点击确定开始安装'),
                     actions: [
                       TextButton(
                         onPressed: () {
@@ -178,10 +171,6 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
     );
   }
 
-  Future<String> _getDownloadPath(String fileName) async {
-    final dir = Directory.current; // 當前工作目錄
-    return p.join(dir.path, fileName);
-  }
 
   @override
   Widget build(BuildContext context) {
