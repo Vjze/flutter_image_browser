@@ -1,9 +1,12 @@
 use crate::frb_generated::StreamSink;
 use futures_lite::StreamExt as _;
 use serde::{Deserialize, Serialize};
+use std::ascii::AsciiExt;
 use std::fs;
 use std::path::Path;
 use std::process::{self, Command, Stdio};
+use std::thread::sleep;
+use std::time::Duration;
 use tokio::{fs::File, io::AsyncWriteExt as _};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -63,11 +66,12 @@ pub async fn check_update() -> anyhow::Result<Option<UpdateInfo>> {
 
         #[cfg(target_os = "linux")]
         let download_url = update_info.plattform.linux.clone();
+        let file_name = download_url.split("/").last().unwrap().to_string();
         let updateinfo = UpdateInfo {
             version: update_info.version.clone(),
             changelog: update_info.changelog.clone(),
             download_url,
-            file_name: update_info.file_name.clone(),
+            file_name,
             date: update_info.date.clone(),
         };
         Ok(Some(updateinfo))
@@ -169,84 +173,60 @@ pub fn close_old_app() -> anyhow::Result<()> {
     }
     Ok(())
 }
-pub fn launch_new_app() -> anyhow::Result<()> {
-    #[cfg(target_os = "windows")]
-    {
-        let mut cmd = Command::new("cmd");
-        cmd.arg("/c")
-            .arg("start")
-            .arg("my_app.exe")
-            .spawn()?
-            .wait()?;
-    }
-    #[cfg(target_os = "macos")]
-    {
-        let mut cmd = Command::new("open");
-        cmd.arg("/Applications/my_app.app").spawn()?.wait()?;
-    }
-    #[cfg(target_os = "linux")]
-    {
-        let mut cmd = Command::new("sh");
-        cmd.arg("my_app").spawn()?.wait()?;
-    }
-    process::exit(0);
-}
-pub fn update_linux(file_path: String) -> anyhow::Result<()> {
-    let _ = close_old_app();
-    let _ = replace_appimage(&file_path);
-    launch_new_app()
-}
+
 pub fn replace_appimage(new_appimage_path: &str) -> anyhow::Result<()> {
     #[cfg(target_os = "linux")]
     {
-        let target_path = "~/.local/bin/MyApp.AppImage"; // 根据你的项目实际路径修改
-        std::fs::copy(new_appimage_path, target_path).expect("Failed to replace AppImage");
+        let target_path = shellexpand::tilde("~/.local/bin/MyApp.AppImage").to_string();
+        if Path::new(&target_path).exists() {
+            std::fs::remove_file(&target_path)?;
+        }
+        std::fs::copy(new_appimage_path, &target_path)?;
         std::process::Command::new("chmod")
-            .args(["+x", target_path])
-            .status()
-            .expect("Failed to make AppImage executable");
+            .args(["+x", &target_path])
+            .status()?;
     }
     #[cfg(target_os = "macos")]
     {
         let app_path = "/Applications/my_app.app";
         let new_app_path = format!("{}/my_app.app", new_appimage_path);
 
+        if !Path::new(&new_app_path).exists() {
+            return Err(anyhow::anyhow!("New app not found at {}", new_app_path));
+        }
+
         if Path::new(app_path).exists() {
-            fs::remove_dir_all(app_path).expect("Failed to remove old app");
+            fs::remove_dir_all(app_path)?;
         }
 
         Command::new("cp")
             .args(["-r", &new_app_path, app_path])
             .status()
-            .expect("Failed to copy new app");
+            .map_err(|e| anyhow::anyhow!("Failed to copy new app: {}", e))?;
     }
-    launch_new_app()
+    Ok(())
 }
-pub fn update_windows(file_path: &str) -> anyhow::Result<()> {
-    let _ = close_old_app();
-    let _ = run_installer(file_path);
-    launch_new_app()
-}
-pub fn run_installer(installer_path: &str) {
+
+pub fn run_installer(installer_path: &str) -> anyhow::Result<()> {
     Command::new(installer_path)
         .spawn()
         .expect("Failed to run installer");
+    process::exit(0)
 }
-pub fn mount_dmg(dmg_path: &str) -> String {
+pub fn mount_dmg(dmg_path: &str) -> anyhow::Result<String> {
     let output = Command::new("hdiutil")
         .args(["attach", dmg_path])
         .output()
-        .expect("Failed to mount dmg");
+        .map_err(|e| anyhow::anyhow!("Failed to mount dmg: {}", e))?;
 
     let output_str = String::from_utf8_lossy(&output.stdout);
     for line in output_str.lines() {
         if line.contains("/Volumes/") {
             let mount_point = line.split('\t').last().unwrap_or("").trim().to_string();
-            return mount_point;
+            return Ok(mount_point);
         }
     }
-
-    panic!("Failed to find mount point");
+    Err(anyhow::anyhow!("Failed to find mount point"))
 }
 pub fn unmount_dmg(mount_point: &str) {
     Command::new("hdiutil")
@@ -254,22 +234,61 @@ pub fn unmount_dmg(mount_point: &str) {
         .status()
         .expect("Failed to unmount dmg");
 }
-pub fn update_macos(dmg_path: &str) -> anyhow::Result<()> {
-    let _ = close_old_app();
-    let mount_point = mount_dmg(dmg_path);
-    let _ = replace_appimage(&mount_point);
-    let _ = unmount_dmg(&mount_point);
-    launch_new_app()
-}
+
 // 安装更新（执行安装包）
 pub fn install_update(file_path: String) -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]
-    let _ = update_windows(&file_path);
+    run_installer(&file_path)?;
+    close_old_app()?;
+    Command::new("cmd")
+        .arg("/c")
+        .arg("start")
+        .arg("my_app.exe")
+        .spawn()?
+        .wait()?;
 
     #[cfg(target_os = "macos")]
-    let _ = update_macos(&file_path);
+    {  // 启动新的进程来进行替换操作和启动新应用
+        launch_update_process(file_path);
+    }
 
     #[cfg(target_os = "linux")]
-    let _ = undate_linux(file_path);
-    Ok(())
+    {
+        replace_appimage(&file_path)?;
+        close_old_app()?;
+        let app_path = shellexpand::tilde("~/.local/bin/MyApp.AppImage").to_string();
+        Command::new(&app_path).spawn()?.wait()?;
+    }
+
+    process::exit(0)
+}
+pub fn launch_update_process(new_appimage_path: String) -> anyhow::Result<()> {
+    // 启动一个新的进程来执行后续任务
+    std::thread::spawn(move || {
+        // 关闭旧应用
+        if let Err(e) = close_old_app() {
+            eprintln!("Error closing old app: {}", e);
+            return;
+        }
+
+        // 等待旧应用退出
+        sleep(Duration::from_secs(2));
+        let mount_point = mount_dmg(&new_appimage_path).unwrap();
+        // 处理替换和安装操作
+        if let Err(e) = replace_appimage(&mount_point) {
+            eprintln!("Error replacing app image: {}", e);
+            return;
+        }
+        unmount_dmg(&mount_point);
+        // 启动新的应用
+        if let Err(e) = Command::new("open")
+            .arg("/Applications/my_app.app")
+            .spawn()
+            {
+            eprintln!("Failed to start new app: {}", e);
+        }
+    });
+
+    // 退出当前程序
+    std::process::exit(0);
 }
