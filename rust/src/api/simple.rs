@@ -73,7 +73,7 @@ pub async fn scan_images(p: String) -> anyhow::Result<u32> {
         match entry {
             Ok(entry) => {
                 let path = entry.path().display().to_string();
-                if is_image_file(path) {
+                if is_image_file(&path) {
                     count += 1;
                 }
             }
@@ -110,7 +110,7 @@ pub async fn list_images(p: String, l: u32, sink: StreamSink<ImageInfo>) -> anyh
         match entry {
             Ok(entry) => {
                 let path = entry.path().display().to_string();
-                if is_image_file(path.clone()) {
+                if is_image_file(&path) {
                     let permit = semaphore.clone().acquire_owned().await?;
                     let sink = sink.clone();
 
@@ -161,10 +161,27 @@ pub fn get_scan_progress() -> f32 {
     }
 }
 
-fn is_image_file(f: String) -> bool {
-    let images_exts: Vec<&str> = vec![
-        ".png", ".jpeg", ".webp", ".pnm", ".ico", ".avif", ".jpg", ".gif", ".JPG", ".GIF", ".PNG",
-        ".JPEG", ".WEBP", ".PNM", ".ICO", ".AVIF",
+fn is_image_file(f: &str) -> bool {
+    // 定义一个更全面的图片扩展名列表（小写）
+    let image_exts: &[&str] = &[
+        // 常见位图格式
+        "png", "jpg", "jpeg", "gif", "bmp", "webp", "ico", "pnm", "avif",
+        // TIFF 和相关格式
+        "tiff", "tif",
+        // 高效率图像格式 (HEIF/HEIC)
+        "heif", "heic",
+        // RAW 格式（常见相机原始文件）
+        "cr2", "nef", "arw", "dng", "raf", "orf",
+        // 其他较少见但仍使用的格式
+        "tga", "pcx", "psd", "exr", "hdr", "jxl", // JXL 是 JPEG XL
+        // 矢量格式（视需求可选）
+        "svg",
     ];
-    images_exts.iter().any(|ext| f.ends_with(ext))
+
+    // 转换为小写并检查扩展名
+    f.to_lowercase()
+        .split('.')
+        .last()
+        .map(|ext| image_exts.contains(&ext))
+        .unwrap_or(false)
 }
