@@ -144,7 +144,6 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
             .listen(
               (image) {
                 setState(() {
-                  print("接收到图片: ${image.path}");
                   infos.add(image);
                 });
               },

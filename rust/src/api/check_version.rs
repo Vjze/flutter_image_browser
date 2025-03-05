@@ -1,13 +1,9 @@
 use crate::frb_generated::StreamSink;
-use futures_lite::StreamExt as _;
-use serde::{de, Deserialize, Serialize};
-use std::ascii::AsciiExt;
+use tokio_stream::StreamExt;
+use serde::{Deserialize, Serialize};
 use std::{env, fs};
 use std::path::{Path, PathBuf};
-use std::process::{self, Command, Stdio};
-use flate2::read::GzDecoder;
-use zip::ZipWriter;
-use zip::write::FileOptions;
+use std::process::{self, Command};
 use tokio::{fs::File, io::AsyncWriteExt as _};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

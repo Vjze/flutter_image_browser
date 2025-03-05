@@ -2,7 +2,6 @@ use crate::frb_generated::StreamSink;
 use anyhow;
 use async_walkdir::WalkDir;
 use flutter_rust_bridge::frb;
-use futures_lite::stream::StreamExt;
 use std::{
     path::Path,
     sync::{
@@ -10,12 +9,8 @@ use std::{
         Arc, Mutex,
     },
 };
-use tokio::sync::Semaphore;
-
-#[frb(init)]
-pub fn init_app() {
-    flutter_rust_bridge::setup_default_user_utils();
-}
+use tokio::sync::{OnceCell, Semaphore};
+use tokio_stream::StreamExt;
 
 #[derive(Debug, Clone)]
 pub struct ImageInfo {
@@ -23,6 +18,27 @@ pub struct ImageInfo {
     pub name: String,
     pub width: usize,
     pub height: usize,
+}
+struct ScanState {
+    should_stop: Arc<AtomicBool>,
+    progress: Arc<Mutex<(usize, usize)>>, // (processed, total)
+}
+static SCAN_STATE: OnceCell<ScanState> = OnceCell::const_new();
+
+async fn get_scan_state() -> &'static ScanState {
+    SCAN_STATE
+        .get_or_init(|| async move {
+            ScanState {
+                should_stop: Arc::new(AtomicBool::new(false)),
+                progress: Arc::new(Mutex::new((0, 0))),
+            }
+        })
+        .await
+}
+
+#[frb(init)]
+pub fn init_app() {
+    flutter_rust_bridge::setup_default_user_utils();
 }
 
 #[frb(sync)]
@@ -47,8 +63,8 @@ async fn get_image_info(path: String) -> Option<ImageInfo> {
                         width,
                         height,
                     })
-                },
-                
+                }
+
                 Err(_) => None,
             }
         } else {
@@ -59,13 +75,7 @@ async fn get_image_info(path: String) -> Option<ImageInfo> {
     }
 }
 
-lazy_static::lazy_static! {
-    static ref SHOULD_STOP: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-    static ref SCAN_PROGRESS: Arc<Mutex<(usize, usize)>> = Arc::new(Mutex::new((0, 0))); // (processed, total)
-}
-
 // 扫描阶段：异步收集图片路径并返回总数
-
 pub async fn scan_images(p: String) -> anyhow::Result<u32> {
     let mut entries = WalkDir::new(p);
     let mut count = 0;
@@ -88,22 +98,23 @@ pub async fn scan_images(p: String) -> anyhow::Result<u32> {
 
 // 读取阶段：加载图片并流式返回
 pub async fn list_images(p: String, l: u32, sink: StreamSink<ImageInfo>) -> anyhow::Result<()> {
+    let state = get_scan_state().await;
     let concurrency = num_cpus::get();
     let semaphore = Arc::new(Semaphore::new(concurrency));
     let total = l as usize;
 
     // 初始化进度
+    state.should_stop.store(false, Ordering::SeqCst);
     {
-        let mut progress = SCAN_PROGRESS.lock().unwrap();
+        let mut progress = state.progress.lock().unwrap();
         *progress = (0, total);
     }
-    SHOULD_STOP.store(false, Ordering::SeqCst);
 
     let mut entries = WalkDir::new(p);
     let mut tasks = Vec::new();
 
     while let Some(entry) = entries.next().await {
-        if SHOULD_STOP.load(Ordering::SeqCst) {
+        if state.should_stop.load(Ordering::SeqCst) {
             break;
         }
 
@@ -135,29 +146,35 @@ pub async fn list_images(p: String, l: u32, sink: StreamSink<ImageInfo>) -> anyh
     for task in tasks {
         task.await?;
         processed += 1;
-        let mut progress = SCAN_PROGRESS.lock().unwrap();
+        let mut progress = state.progress.lock().unwrap();
         progress.0 = processed;
     }
 
     // 重置进度
     {
-        let mut progress = SCAN_PROGRESS.lock().unwrap();
-        *progress = (0, 0);
+        let mut progress = state.progress.lock().unwrap();
+        *progress = (processed, total);
     }
     Ok(())
 }
 
 #[frb(sync)]
 pub fn stop_scan() {
-    SHOULD_STOP.store(true, Ordering::SeqCst);
+    if let Some(state) = SCAN_STATE.get() {
+        state.should_stop.store(true, Ordering::SeqCst);
+    }
 }
 
 pub fn get_scan_progress() -> f32 {
-    let progress = SCAN_PROGRESS.lock().unwrap();
-    if progress.1 == 0 {
-        0.0
+    if let Some(state) = SCAN_STATE.get() {
+        let progress = state.progress.lock().unwrap();
+        if progress.1 == 0 {
+            0.0
+        } else {
+            (progress.0 as f32 / progress.1 as f32) * 100.0
+        }
     } else {
-        (progress.0 as f32 / progress.1 as f32) * 100.0
+        0.0
     }
 }
 
@@ -167,10 +184,8 @@ fn is_image_file(f: &str) -> bool {
         // 常见位图格式
         "png", "jpg", "jpeg", "gif", "bmp", "webp", "ico", "pnm", "avif",
         // TIFF 和相关格式
-        "tiff", "tif",
-        // 高效率图像格式 (HEIF/HEIC)
-        "heif", "heic",
-        // RAW 格式（常见相机原始文件）
+        "tiff", "tif", // 高效率图像格式 (HEIF/HEIC)
+        "heif", "heic", // RAW 格式（常见相机原始文件）
         "cr2", "nef", "arw", "dng", "raf", "orf",
         // 其他较少见但仍使用的格式
         "tga", "pcx", "psd", "exr", "hdr", "jxl", // JXL 是 JPEG XL
