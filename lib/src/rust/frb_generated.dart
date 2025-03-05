@@ -494,8 +494,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return ImageInfo(
       path: dco_decode_String(arr[0]),
       name: dco_decode_String(arr[1]),
-      width: dco_decode_u_32(arr[2]),
-      height: dco_decode_u_32(arr[3]),
+      width: dco_decode_usize(arr[2]),
+      height: dco_decode_usize(arr[3]),
     );
   }
 
@@ -548,6 +548,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       fileName: dco_decode_String(arr[3]),
       date: dco_decode_String(arr[4]),
     );
+  }
+
+  @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
   }
 
   @protected
@@ -643,8 +649,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_path = sse_decode_String(deserializer);
     var var_name = sse_decode_String(deserializer);
-    var var_width = sse_decode_u_32(deserializer);
-    var var_height = sse_decode_u_32(deserializer);
+    var var_width = sse_decode_usize(deserializer);
+    var var_height = sse_decode_usize(deserializer);
     return ImageInfo(
       path: var_path,
       name: var_name,
@@ -711,6 +717,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       fileName: var_fileName,
       date: var_date,
     );
+  }
+
+  @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
   }
 
   @protected
@@ -834,8 +846,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.path, serializer);
     sse_encode_String(self.name, serializer);
-    sse_encode_u_32(self.width, serializer);
-    sse_encode_u_32(self.height, serializer);
+    sse_encode_usize(self.width, serializer);
+    sse_encode_usize(self.height, serializer);
   }
 
   @protected
@@ -892,6 +904,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.downloadUrl, serializer);
     sse_encode_String(self.fileName, serializer);
     sse_encode_String(self.date, serializer);
+  }
+
+  @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
   }
 
   @protected

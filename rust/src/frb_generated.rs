@@ -503,8 +503,8 @@ impl SseDecode for crate::api::simple::ImageInfo {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_path = <String>::sse_decode(deserializer);
         let mut var_name = <String>::sse_decode(deserializer);
-        let mut var_width = <u32>::sse_decode(deserializer);
-        let mut var_height = <u32>::sse_decode(deserializer);
+        let mut var_width = <usize>::sse_decode(deserializer);
+        let mut var_height = <usize>::sse_decode(deserializer);
         return crate::api::simple::ImageInfo {
             path: var_path,
             name: var_name,
@@ -580,6 +580,13 @@ impl SseDecode for crate::api::check_version::UpdateInfo {
             file_name: var_fileName,
             date: var_date,
         };
+    }
+}
+
+impl SseDecode for usize {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_u64::<NativeEndian>().unwrap() as _
     }
 }
 
@@ -816,8 +823,8 @@ impl SseEncode for crate::api::simple::ImageInfo {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.path, serializer);
         <String>::sse_encode(self.name, serializer);
-        <u32>::sse_encode(self.width, serializer);
-        <u32>::sse_encode(self.height, serializer);
+        <usize>::sse_encode(self.width, serializer);
+        <usize>::sse_encode(self.height, serializer);
     }
 }
 
@@ -875,6 +882,16 @@ impl SseEncode for crate::api::check_version::UpdateInfo {
         <String>::sse_encode(self.download_url, serializer);
         <String>::sse_encode(self.file_name, serializer);
         <String>::sse_encode(self.date, serializer);
+    }
+}
+
+impl SseEncode for usize {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer
+            .cursor
+            .write_u64::<NativeEndian>(self as _)
+            .unwrap();
     }
 }
 

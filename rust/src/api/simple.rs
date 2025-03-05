@@ -1,13 +1,16 @@
 use crate::frb_generated::StreamSink;
-use flutter_rust_bridge::frb;
-use image::ImageReader;
-use std::io::Cursor;
-use std::path::Path;
-use tokio::sync::Semaphore;
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}, Mutex};
 use anyhow;
 use async_walkdir::WalkDir;
+use flutter_rust_bridge::frb;
 use futures_lite::stream::StreamExt;
+use std::{
+    path::Path,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+};
+use tokio::sync::Semaphore;
 
 #[frb(init)]
 pub fn init_app() {
@@ -18,8 +21,8 @@ pub fn init_app() {
 pub struct ImageInfo {
     pub path: String,
     pub name: String,
-    pub width: u32,
-    pub height: u32,
+    pub width: usize,
+    pub height: usize,
 }
 
 #[frb(sync)]
@@ -32,23 +35,28 @@ pub fn get_path() -> anyhow::Result<String> {
 }
 
 async fn get_image_info(path: String) -> Option<ImageInfo> {
-    if let Some(file_name) = Path::new(&path).file_name() {
+    if let Some(file_name) = Path::new(&path.clone()).file_name() {
         if let Some(name) = file_name.to_str() {
-            let data = tokio::fs::read(&path).await.ok()?;
-            let img = ImageReader::new(Cursor::new(data))
-                .with_guessed_format()
-                .ok()?
-                .decode()
-                .ok()?;
-            return Some(ImageInfo {
-                path: path.clone(),
-                name: name.to_string(),
-                width: img.width(),
-                height: img.height(),
-            });
+            match imagesize::size(path.clone()) {
+                Ok(size) => {
+                    let width = size.width;
+                    let height = size.height;
+                    Some(ImageInfo {
+                        path,
+                        name: name.to_string(),
+                        width,
+                        height,
+                    })
+                },
+                
+                Err(_) => None,
+            }
+        } else {
+            None
         }
+    } else {
+        None
     }
-    None
 }
 
 lazy_static::lazy_static! {
@@ -155,8 +163,8 @@ pub fn get_scan_progress() -> f32 {
 
 fn is_image_file(f: String) -> bool {
     let images_exts: Vec<&str> = vec![
-        ".png", ".jpeg", ".webp", ".pnm", ".ico", ".avif", ".jpg", ".gif",
-        ".JPG", ".GIF", ".PNG", ".JPEG", ".WEBP", ".PNM", ".ICO", ".AVIF",
+        ".png", ".jpeg", ".webp", ".pnm", ".ico", ".avif", ".jpg", ".gif", ".JPG", ".GIF", ".PNG",
+        ".JPEG", ".WEBP", ".PNM", ".ICO", ".AVIF",
     ];
     images_exts.iter().any(|ext| f.ends_with(ext))
 }

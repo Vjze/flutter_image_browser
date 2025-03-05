@@ -26,8 +26,8 @@ Future<double> getScanProgress() =>
 class ImageInfo {
   final String path;
   final String name;
-  final int width;
-  final int height;
+  final BigInt width;
+  final BigInt height;
 
   const ImageInfo({
     required this.path,
