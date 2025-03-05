@@ -165,7 +165,8 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
             );
       }
     } catch (e) {
-      showAlertDialog(context, "获取文件夹路径失败");
+      print('dart catch e: $e');
+      showAlertDialog(context, e.toString());
     }
   }
 
