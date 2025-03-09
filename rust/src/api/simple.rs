@@ -155,6 +155,7 @@ pub async fn list_images(p: String, l: u32, sink: StreamSink<ImageInfo>) -> anyh
         let mut progress = state.progress.lock().unwrap();
         *progress = (processed, total);
     }
+    println!("扫描完成");
     Ok(())
 }
 
