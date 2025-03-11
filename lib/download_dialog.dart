@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'package:Flutter_Image_Browser/main.dart';
 import 'package:Flutter_Image_Browser/src/rust/api/check_version.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:Flutter_Image_Browser/story.dart';
 
 class DownloadProgressDialog extends StatefulWidget {
   final UpdateInfo updateInfo;
@@ -39,7 +40,7 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
   }
 
   void _startDownload() async {
-
+    final story = Provider.of<StoryModel>(context, listen: false);
     setState(() {
       _isDownloading = true;
       _hasError = false;
@@ -66,7 +67,7 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
 
     _progressSubscription = downloadUpdate(
       url: widget.updateInfo.downloadUrl,
-      fileName: widget.updateInfo.fileName,
+      fileName: story.fileName,
     ).listen(
       (event) {
         if (event is DownloadEvent_Progress) {
@@ -114,7 +115,6 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
       onDone: () {
         if (progress >= 1.0 && mounted && !_hasError) {
           Navigator.of(context).pop();
-          fileName = widget.updateInfo.fileName;
           Future.microtask(() {
             showDialog(
               barrierDismissible: false,
@@ -173,7 +173,6 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
       },
     );
   }
-
 
   @override
   Widget build(BuildContext context) {

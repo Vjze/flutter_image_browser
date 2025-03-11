@@ -1,30 +1,15 @@
 import 'dart:async';
 import 'dart:io';
-
 import 'package:Flutter_Image_Browser/dialog.dart';
 import 'package:Flutter_Image_Browser/download_dialog.dart';
 import 'package:Flutter_Image_Browser/main.dart';
 import 'package:Flutter_Image_Browser/src/rust/api/check_version.dart';
 import 'package:Flutter_Image_Browser/src/rust/api/simple.dart' as rust_api;
+import 'package:Flutter_Image_Browser/story.dart';
 import 'package:Flutter_Image_Browser/updata_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-class ImageBrowser extends StatelessWidget {
-  const ImageBrowser({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Image Browser',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: const ImageBrowserPage(),
-    );
-  }
-}
+import 'package:provider/provider.dart';
 
 class ImageBrowserPage extends StatefulWidget {
   const ImageBrowserPage({super.key});
@@ -34,12 +19,10 @@ class ImageBrowserPage extends StatefulWidget {
 }
 
 class _ImageBrowserPageState extends State<ImageBrowserPage> {
-  List<rust_api.ImageInfo> infos = [];
-  int currentIndex = 0;
   final FocusNode _focusNode = FocusNode();
   bool isScanning = false;
   bool isLoading = false;
-  int totalImages = 0;
+
   StreamSubscription<rust_api.ImageInfo>? _subscription;
   Timer? _progressTimer;
   @override
@@ -78,33 +61,33 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
   }
 
   void _showDownloadDialog(UpdateInfo updateInfo) {
+    final story = Provider.of<StoryModel>(context, listen: false);
     showDialog(
       context: context,
       barrierDismissible: false,
       builder:
           (_) => DownloadProgressDialog(
             updateInfo: updateInfo,
-            onInstall: () => installUpdate(fileName: fileName),
+            onInstall: () => installUpdate(fileName: story.fileName),
           ),
     );
   }
 
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  BuildContext get globalContext => navigatorKey.currentState!.overlay!.context;
   Future<void> _pickFolder() async {
+    final story = Provider.of<StoryModel>(context, listen: false);
     try {
       String? folderPath = rust_api.getPath();
       if (folderPath.isNotEmpty && folderPath.isNotEmpty) {
         // 扫描阶段
         setState(() {
-          infos.clear();
-          currentIndex = 0;
+          story.infos.clear();
+          story.setCurrentIndex(0);
           isScanning = true;
           isLoading = false;
         });
 
-        totalImages = await rust_api.scanImages(p: folderPath);
-
+        final totalImages = await rust_api.scanImages(p: folderPath);
+        story.setTotalImages(totalImages);
         setState(() {
           isScanning = false;
           isLoading = true;
@@ -121,11 +104,10 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
             .listen(
               (image) {
                 setState(() {
-                  infos.add(image);
+                  story.infos.add(image);
                 });
               },
               onDone: () {
-                
                 _progressTimer?.cancel();
                 setState(() {
                   isLoading = false;
@@ -155,135 +137,139 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
   }
 
   void _previousImage() {
-    if (currentIndex > 0) {
-      setState(() {
-        currentIndex--;
-      });
-    } else if (currentIndex == 0) {
-      setState(() {
-        currentIndex = infos.length - 1;
-      });
+    final story = Provider.of<StoryModel>(context, listen: false);
+    if (story.currentIndex > 0) {
+      story.setCurrentIndex(story.currentIndex - 1);
+    } else if (story.currentIndex == 0) {
+      story.setCurrentIndex(story.infos.length - 1);
     }
   }
 
   void _nextImage() {
-    if (currentIndex < infos.length - 1) {
-      setState(() {
-        currentIndex++;
-      });
-    } else if (currentIndex == infos.length - 1) {
-      setState(() {
-        currentIndex = 0;
-      });
+    final story = Provider.of<StoryModel>(context, listen: false);
+    if (story.currentIndex < story.infos.length - 1) {
+      story.setCurrentIndex(story.currentIndex + 1);
+    } else if (story.currentIndex == story.infos.length - 1) {
+      story.setCurrentIndex(0);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Focus(
-        // 确保焦点停留在整个页面，而不是按钮上
-        focusNode: _focusNode,
-        onKeyEvent: (node, event) {
-          if (event is KeyDownEvent) {
-            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-              _previousImage();
-              return KeyEventResult.handled; // 表示已处理
-            } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-              _nextImage();
-              return KeyEventResult.handled;
-            } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-              _nextImage();
-              return KeyEventResult.handled;
-            } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-              _previousImage();
-              return KeyEventResult.handled;
-            }
+    final story = Provider.of<StoryModel>(context);
+    return Focus(
+      focusNode: _focusNode,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            _previousImage();
+            return KeyEventResult.handled; // 表示已处理
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            _nextImage();
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+            _nextImage();
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+            _previousImage();
+            return KeyEventResult.handled;
           }
-          return KeyEventResult.ignored; // 未处理的事件交给其他控件
-        },
-        child: Column(
-          children: [
-            Expanded(
-              child: InteractiveViewer(
-                panEnabled: true,
-                boundaryMargin: const EdgeInsets.all(20),
-                minScale: 0.5,
-                maxScale: 10.0,
-                child: Center(
-                  child:
-                      infos.isEmpty
-                          ? const Text('请选择文件夹加载图片')
-                          : Image.file(
-                            File(infos[currentIndex].path),
-                            fit: BoxFit.contain,
-                          ),
-                ),
+        }
+        return KeyEventResult.ignored; // 未处理的事件交给其他控件
+      },
+      child: Column(
+        children: [
+          Expanded(
+            child: InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: const EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 10.0,
+              child: Center(
+                child:
+                    story.infos.isEmpty
+                        ? const Text('请选择文件夹加载图片')
+                        : Image.file(
+                          File(story.infos[story.currentIndex].path),
+                          fit: BoxFit.contain,
+                        ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.all(8.0),
-              color: Colors.grey[200],
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
+          ),
+          Container(
+            padding: const EdgeInsets.all(8.0),
+            color: Colors.grey[200],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: _pickFolder,
+                      child: const Text('选择文件夹'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _previousImage,
+                      child: const Text('上一张'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _nextImage,
+                      child: const Text('下一张'),
+                    ),
+                    const SizedBox(width: 8),
+                    if (isScanning) const Text("扫描中..."),
+                    if (isLoading)
+                      FutureBuilder<double>(
+                        future: rust_api.getScanProgress(),
+                        builder: (context, snapshot) {
+                          final progress = snapshot.data ?? 0.0;
+                          return Row(
+                            children: [
+                              Text("读取中: ${progress.toStringAsFixed(1)}%"),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                width: 100,
+                                child: LinearProgressIndicator(
+                                  value: progress / 100,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: _stopScan,
+                                child: const Text("停止扫描"),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                  ],
+                ),
+                if (story.totalImages > 0 || story.infos.isNotEmpty)
                   Row(
                     children: [
-                      ElevatedButton(
-                        onPressed: _pickFolder,
-                        child: const Text('选择文件夹'),
+                      Text(
+                        '文件名: ${story.infos.isEmpty ? "未加载" : story.infos[story.currentIndex].name} | '
+                        '分辨率: ${story.infos.isEmpty ? "未加载" : "${story.infos[story.currentIndex].width}x${story.infos[story.currentIndex].height}"} | '
+                        '当前: ${story.infos.isEmpty ? 0 : story.currentIndex + 1}/${story.totalImages}',
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: _previousImage,
-                        child: const Text('上一张'),
+                      IconButton(
+                        onPressed:
+                            () => {
+                              setState(() {
+                                story.setListView(!story.listView);
+                              }),
+                            },
+                        icon: Icon(Icons.more),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: _nextImage,
-                        child: const Text('下一张'),
-                      ),
-                      const SizedBox(width: 8),
-                      if (isScanning) const Text("扫描中..."),
-                      if (isLoading)
-                        FutureBuilder<double>(
-                          future: rust_api.getScanProgress(),
-                          builder: (context, snapshot) {
-                            final progress = snapshot.data ?? 0.0;
-                            print("进度: ${snapshot.data}");
-                            return Row(
-                              children: [
-                                Text("读取中: ${progress.toStringAsFixed(1)}%"),
-                                const SizedBox(width: 8),
-                                SizedBox(
-                                  width: 100,
-                                  child: LinearProgressIndicator(
-                                    value: progress / 100,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton(
-                                  onPressed: _stopScan,
-                                  child: const Text("停止扫描"),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
                     ],
                   ),
-                  if (totalImages > 0 || infos.isNotEmpty)
-                    Text(
-                      '文件名: ${infos.isEmpty ? "未加载" : infos[currentIndex].name} | '
-                      '分辨率: ${infos.isEmpty ? "未加载" : "${infos[currentIndex].width}x${infos[currentIndex].height}"} | '
-                      '当前: ${infos.isEmpty ? 0 : currentIndex + 1}/$totalImages',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                    ),
-                ],
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

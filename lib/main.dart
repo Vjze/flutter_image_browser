@@ -1,22 +1,17 @@
 import 'dart:async';
-import 'dart:io';
-
-import 'package:Flutter_Image_Browser/dialog.dart';
-import 'package:Flutter_Image_Browser/download_dialog.dart';
 import 'package:Flutter_Image_Browser/image_view.dart';
-import 'package:Flutter_Image_Browser/src/rust/api/check_version.dart';
-import 'package:Flutter_Image_Browser/updata_dialog.dart';
+import 'package:Flutter_Image_Browser/img_list.dart';
+import 'package:Flutter_Image_Browser/story.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:Flutter_Image_Browser/src/rust/api/simple.dart' as rust_api;
 import 'package:Flutter_Image_Browser/src/rust/frb_generated.dart';
+import 'package:provider/provider.dart';
 
 Future<void> main() async {
   await RustLib.init();
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(create: (context) => StoryModel(), child: MyApp()),
+  );
 }
-
-late final fileName;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -29,9 +24,23 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const ImageBrowser(),
+      home: Scaffold(
+        body: Consumer<StoryModel>(
+          builder: (context, story, child) {
+            return story.listView
+                ? ImageBrowserPage()
+                : Container(
+                  margin: EdgeInsets.only(top: 10, right: 5),
+                  child: Row(
+                    children: [
+                      Expanded(flex: 8, child: ImageBrowserPage()),
+                      Expanded(flex: 2, child: ImgList()),
+                    ],
+                  ),
+                );
+          },
+        ),
+      ),
     );
   }
 }
-
-
