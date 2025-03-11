@@ -208,7 +208,7 @@ pub async fn install_update(file_name: String) -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]
     {   
         
-        run_installer(file_path.display().to_string())?;
+        run_installer(&file_path.display().to_string())?;
         let mut cmd = Command::new("taskkill");
         cmd.arg("/F").arg("/IM").arg("my_app.exe").spawn()?.wait()?;
         Command::new("cmd")
