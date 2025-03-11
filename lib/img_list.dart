@@ -29,8 +29,8 @@ class _ImgListState extends State<ImgList> {
       padding: EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: Colors.grey[300],
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(10.0),
+        // border: Border.all(color: Colors.grey),
+        // borderRadius: BorderRadius.circular(10.0),
       ),
 
       child: ListView.builder(
@@ -64,7 +64,7 @@ class _ImgListState extends State<ImgList> {
               fit: BoxFit.fill,
             ),
             SizedBox(
-              width: 200,
+              width: 200 - 48,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end, // 整体右对齐
                 children: [

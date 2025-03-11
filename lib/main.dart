@@ -28,16 +28,16 @@ class MyApp extends StatelessWidget {
         body: Consumer<StoryModel>(
           builder: (context, story, child) {
             return story.listView
-                ? ImageBrowserPage()
-                : Container(
-                  margin: EdgeInsets.only(top: 10, right: 5),
+                ? Container(
+                  margin: EdgeInsets.only(right: 5),
                   child: Row(
                     children: [
                       Expanded(flex: 8, child: ImageBrowserPage()),
                       Expanded(flex: 2, child: ImgList()),
                     ],
                   ),
-                );
+                )
+                : ImageBrowserPage();
           },
         ),
       ),

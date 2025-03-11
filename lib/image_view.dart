@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:Flutter_Image_Browser/dialog.dart';
 import 'package:Flutter_Image_Browser/download_dialog.dart';
-import 'package:Flutter_Image_Browser/main.dart';
 import 'package:Flutter_Image_Browser/src/rust/api/check_version.dart';
 import 'package:Flutter_Image_Browser/src/rust/api/simple.dart' as rust_api;
 import 'package:Flutter_Image_Browser/story.dart';
@@ -198,7 +197,8 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
           ),
           Container(
             padding: const EdgeInsets.all(8.0),
-            color: Colors.grey[200],
+            color: Colors.grey[300],
+
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
