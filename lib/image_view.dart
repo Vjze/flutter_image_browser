@@ -262,7 +262,11 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
                                 story.setListView(!story.listView);
                               }),
                             },
-                        icon: Icon(Icons.more),
+                        icon: Icon(
+                          story.listView
+                              ? Icons.arrow_circle_left
+                              : Icons.arrow_circle_right,
+                        ),
                       ),
                     ],
                   ),

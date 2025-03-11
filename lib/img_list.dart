@@ -63,28 +63,26 @@ class _ImgListState extends State<ImgList> {
               height: 48,
               fit: BoxFit.fill,
             ),
-            Column(
-              children: [
-                Text(
-                  info.name,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
+            SizedBox(
+              width: 200,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end, // 整体右对齐
+                children: [
+                  Text(
+                    textAlign: TextAlign.right,
+                    info.name,
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    softWrap: false,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  softWrap: false,
-                  maxLines: 1,
-                  overflow: TextOverflow.fade,
-                ),
-                Center(
-                  child: Text(
+                  Text(
                     "${info.width}x${info.height}",
-                    style: TextStyle(
-                      fontSize: 15,
-                    ),
+                    style: TextStyle(fontSize: 15),
+                    textAlign: TextAlign.right,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
