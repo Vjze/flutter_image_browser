@@ -1,5 +1,5 @@
-import 'package:Flutter_Image_Browser/src/rust/api/check_version.dart';
 import 'package:flutter/material.dart';
+import 'package:image_browser/src/rust/api/check_version.dart';
 
 class UpdateDialog extends StatelessWidget {
   final UpdateInfo updateInfo;

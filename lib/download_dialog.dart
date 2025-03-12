@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'package:Flutter_Image_Browser/src/rust/api/check_version.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:Flutter_Image_Browser/story.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_browser/src/rust/api/check_version.dart';
+import 'package:image_browser/story.dart';
 
-class DownloadProgressDialog extends StatefulWidget {
+class DownloadProgressDialog extends ConsumerStatefulWidget {
   final UpdateInfo updateInfo;
   final VoidCallback onInstall;
 
@@ -15,10 +15,12 @@ class DownloadProgressDialog extends StatefulWidget {
   });
 
   @override
-  State<DownloadProgressDialog> createState() => _DownloadProgressDialogState();
+  ConsumerState<DownloadProgressDialog> createState() =>
+      _DownloadProgressDialogState();
 }
 
-class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
+class _DownloadProgressDialogState
+    extends ConsumerState<DownloadProgressDialog> {
   double progress = 0.0;
   String speed = '0 KB/s';
   bool _isDownloading = false; // 控制進度彈窗顯示
@@ -27,7 +29,6 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
   @override
   void initState() {
     super.initState();
-    // 延遲執行 _startDownload，直到 initState 完成
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startDownload();
     });
@@ -40,7 +41,6 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
   }
 
   void _startDownload() async {
-    final story = Provider.of<StoryModel>(context, listen: false);
     setState(() {
       _isDownloading = true;
       _hasError = false;
@@ -67,7 +67,7 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
 
     _progressSubscription = downloadUpdate(
       url: widget.updateInfo.downloadUrl,
-      fileName: story.fileName,
+      fileName: ref.read(storyProvider).fileName,
     ).listen(
       (event) {
         if (event is DownloadEvent_Progress) {
@@ -83,12 +83,13 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
             _isDownloading = false;
             _hasError = true;
           });
-
+          // ignore: use_build_context_synchronously
           Navigator.of(context).pop();
 
           Future.microtask(() {
             showDialog(
               barrierDismissible: false,
+              // ignore: use_build_context_synchronously
               context: context,
               builder:
                   (context) => AlertDialog(
@@ -97,10 +98,8 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
                     actions: [
                       TextButton(
                         onPressed: () {
-                          print("點擊確定，關閉錯誤彈窗");
                           Navigator.of(context).pop();
                           if (Navigator.of(context).canPop()) {
-                            print("關閉父層彈窗");
                             Navigator.of(context).pop();
                           }
                         },
@@ -118,6 +117,7 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
           Future.microtask(() {
             showDialog(
               barrierDismissible: false,
+              // ignore: use_build_context_synchronously
               context: context,
               builder:
                   (context) => AlertDialog(
@@ -147,9 +147,11 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
           _isDownloading = false;
           _hasError = true;
         });
+        // ignore: use_build_context_synchronously
         Navigator.of(context).pop();
         Future.microtask(() {
           showDialog(
+            // ignore: use_build_context_synchronously
             context: context,
             barrierDismissible: false,
             builder:

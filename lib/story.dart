@@ -1,46 +1,79 @@
-import 'package:Flutter_Image_Browser/src/rust/api/simple.dart' as rust_api;
-import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_browser/src/rust/api/simple.dart';
 
-class StoryModel extends ChangeNotifier {
-  List<rust_api.ImageInfo> _infos = [];
-  int _currentIndex = 0;
-  bool _listView = false;
-  int _totalImages = 0;
-  final String _fileName = "";
+// 定义状态类
+class StoryState {
+  final List<ImageInfo> infos;
+  final int currentIndex;
+  final bool listView;
+  final int totalImages;
+  final String fileName;
 
-  List<rust_api.ImageInfo> get infos => _infos;
-  int get currentIndex => _currentIndex;
-  bool get listView => _listView;
-  int get totalImages => _totalImages;
-  String get fileName => _fileName;
+  StoryState({
+    required this.infos,
+    required this.currentIndex,
+    required this.listView,
+    required this.totalImages,
+    required this.fileName,
+  });
+
+  // 用于复制状态的 copyWith 方法，便于更新部分字段
+  StoryState copyWith({
+    List<ImageInfo>? infos,
+    int? currentIndex,
+    bool? listView,
+    int? totalImages,
+    String? fileName,
+  }) {
+    return StoryState(
+      infos: infos ?? this.infos,
+      currentIndex: currentIndex ?? this.currentIndex,
+      listView: listView ?? this.listView,
+      totalImages: totalImages ?? this.totalImages,
+      fileName: fileName ?? this.fileName,
+    );
+  }
+}
+
+// 定义 StateNotifier
+class StoryNotifier extends StateNotifier<StoryState> {
+  StoryNotifier()
+    : super(
+        StoryState(
+          infos: [],
+          currentIndex: 0,
+          listView: false,
+          totalImages: 0,
+          fileName: "",
+        ),
+      );
 
   void setTotalImages(int value) {
-    _totalImages = value;
-    notifyListeners();
+    state = state.copyWith(totalImages: value);
   }
 
   void setCurrentIndex(int index) {
-    _currentIndex = index;
-    notifyListeners(); // 通知所有监听者
+    state = state.copyWith(currentIndex: index);
   }
 
-  void setInfos(List<rust_api.ImageInfo> newInfos) {
-    _infos = newInfos;
-    notifyListeners();
+  void setInfos(List<ImageInfo> newInfos) {
+    state = state.copyWith(infos: newInfos);
   }
 
   void setListView(bool value) {
-    _listView = value;
-    notifyListeners();
+    state = state.copyWith(listView: value);
   }
 
-  void addImage(rust_api.ImageInfo image) {
-    _infos.add(image);
-    notifyListeners();
+  void addImage(ImageInfo image) {
+    state = state.copyWith(infos: [...state.infos, image]);
   }
 
   void clearInfos() {
-    _infos.clear();
-    notifyListeners();
+    state = state.copyWith(infos: []);
   }
 }
+
+// 定义 Riverpod 的 provider
+final storyProvider = StateNotifierProvider<StoryNotifier, StoryState>((ref) {
+  return StoryNotifier();
+});

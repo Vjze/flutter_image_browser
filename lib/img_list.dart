@@ -1,17 +1,17 @@
 import 'dart:io';
-import 'package:Flutter_Image_Browser/story.dart';
 import 'package:flutter/material.dart';
-import 'package:Flutter_Image_Browser/src/rust/api/simple.dart' as rust_api;
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_browser/src/rust/api/simple.dart' as rust_api;
+import 'package:image_browser/story.dart';
 
-class ImgList extends StatefulWidget {
+class ImgList extends ConsumerStatefulWidget {
   const ImgList({super.key});
 
   @override
-  State<ImgList> createState() => _ImgListState();
+  ConsumerState<ImgList> createState() => _ImgListState();
 }
 
-class _ImgListState extends State<ImgList> {
+class _ImgListState extends ConsumerState<ImgList> {
   @override
   void initState() {
     super.initState();
@@ -24,35 +24,32 @@ class _ImgListState extends State<ImgList> {
 
   @override
   Widget build(BuildContext context) {
-    final story = Provider.of<StoryModel>(context);
     return Container(
       padding: EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: Colors.grey[300],
-        // border: Border.all(color: Colors.grey),
-        // borderRadius: BorderRadius.circular(10.0),
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(10.0)),
       ),
 
       child: ListView.builder(
-        itemCount: story.infos.length,
+        itemCount: ref.read(storyProvider).infos.length,
         itemBuilder: (context, index) {
-          return _listItems(story.infos[index], index);
+          return _listItems(ref.read(storyProvider).infos[index], index);
         },
       ),
     );
   }
 
   Widget _listItems(rust_api.ImageInfo info, int index) {
-    final story = Provider.of<StoryModel>(context);
     return InkWell(
-      onTap: () => {story.setCurrentIndex(index)},
+      onTap: () => {ref.read(storyProvider.notifier).setCurrentIndex(index)},
       child: Container(
         margin: EdgeInsets.all(5.0),
         padding: EdgeInsets.all(12.0),
         decoration: BoxDecoration(
           color: Colors.greenAccent[100],
           border: Border.all(color: Colors.grey),
-          borderRadius: BorderRadius.circular(10.0),
+          borderRadius: BorderRadius.circular(16.0),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
