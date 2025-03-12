@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get/get.dart';
 import 'package:image_browser/image_view.dart';
 import 'package:image_browser/img_list.dart';
 import 'package:image_browser/src/rust/frb_generated.dart';
@@ -25,15 +25,16 @@ Future<void> main() async {
     await WindowManager.instance.show();
     await WindowManager.instance.focus();
   });
-  runApp(ProviderScope(child: MyApp()));
+  Get.put(StoryState());
+  runApp(MyApp());
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final story = ref.watch(storyProvider);
+  Widget build(BuildContext context) {
+    final story = Get.find<StoryState>();
     return MaterialApp(
       title: 'Image Browser',
       debugShowCheckedModeBanner: false,
@@ -41,19 +42,21 @@ class MyApp extends ConsumerWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: Scaffold(
-        body:
-            story.listView
-                ? Container(
-                  margin: EdgeInsets.only(right: 5),
-                  child: Row(
-                    children: [
-                      Expanded(flex: 8, child: ImageBrowserPage()),
-                      Expanded(flex: 2, child: ImgList()),
-                    ],
-                  ),
-                )
-                : ImageBrowserPage(),
+      home: Obx(
+        () => Scaffold(
+          body:
+              story.listView.value
+                  ? Container(
+                    margin: EdgeInsets.only(right: 5),
+                    child: Row(
+                      children: [
+                        Expanded(flex: 8, child: ImageBrowserPage()),
+                        Expanded(flex: 2, child: ImgList()),
+                      ],
+                    ),
+                  )
+                  : ImageBrowserPage(),
+        ),
       ),
     );
   }

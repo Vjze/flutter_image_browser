@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get/get.dart';
 import 'package:image_browser/src/rust/api/check_version.dart';
 import 'package:image_browser/story.dart';
 
-class DownloadProgressDialog extends ConsumerStatefulWidget {
+class DownloadProgressDialog extends StatefulWidget {
   final UpdateInfo updateInfo;
   final VoidCallback onInstall;
 
@@ -15,12 +15,11 @@ class DownloadProgressDialog extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<DownloadProgressDialog> createState() =>
-      _DownloadProgressDialogState();
+  State<DownloadProgressDialog> createState() => _DownloadProgressDialogState();
 }
 
-class _DownloadProgressDialogState
-    extends ConsumerState<DownloadProgressDialog> {
+class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
+  final story = Get.find<StoryState>();
   double progress = 0.0;
   String speed = '0 KB/s';
   bool _isDownloading = false; // 控制進度彈窗顯示
@@ -67,7 +66,7 @@ class _DownloadProgressDialogState
 
     _progressSubscription = downloadUpdate(
       url: widget.updateInfo.downloadUrl,
-      fileName: ref.read(storyProvider).fileName,
+      fileName: story.fileName.value,
     ).listen(
       (event) {
         if (event is DownloadEvent_Progress) {

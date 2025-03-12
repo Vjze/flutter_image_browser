@@ -1,17 +1,18 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get/get.dart';
 import 'package:image_browser/src/rust/api/simple.dart' as rust_api;
 import 'package:image_browser/story.dart';
 
-class ImgList extends ConsumerStatefulWidget {
+class ImgList extends StatefulWidget {
   const ImgList({super.key});
 
   @override
-  ConsumerState<ImgList> createState() => _ImgListState();
+  State<ImgList> createState() => _ImgListState();
 }
 
-class _ImgListState extends ConsumerState<ImgList> {
+class _ImgListState extends State<ImgList> {
+  final story = Get.find<StoryState>();
   @override
   void initState() {
     super.initState();
@@ -24,25 +25,27 @@ class _ImgListState extends ConsumerState<ImgList> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(10.0)),
-      ),
+    return Obx(
+      () => Container(
+        padding: EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(10.0)),
+        ),
 
-      child: ListView.builder(
-        itemCount: ref.read(storyProvider).infos.length,
-        itemBuilder: (context, index) {
-          return _listItems(ref.read(storyProvider).infos[index], index);
-        },
+        child: ListView.builder(
+          itemCount: story.infos.length,
+          itemBuilder: (context, index) {
+            return _listItems(story.infos[index], index);
+          },
+        ),
       ),
     );
   }
 
   Widget _listItems(rust_api.ImageInfo info, int index) {
     return InkWell(
-      onTap: () => {ref.read(storyProvider.notifier).setCurrentIndex(index)},
+      onTap: () => {story.currentIndex.value = index},
       child: Container(
         margin: EdgeInsets.all(5.0),
         padding: EdgeInsets.all(12.0),
