@@ -53,25 +53,17 @@ pub async fn check_update() -> anyhow::Result<Option<UpdateInfo>> {
     let update_info: UpdateInfos = serde_json::from_str(&response)?;
     let current_version = env!("CARGO_PKG_VERSION");
     if update_info.version != current_version {
-        let mut download_url = String::new();
-        // 根据平台选下载链接
-        #[cfg(target_os = "windows")]
-        {
-            download_url = update_info.plattform.windows.clone();
-        }
+        // 使用 Option 来确保在不同平台下赋值
+        let download_url = match std::env::consts::OS {
+            "windows" => update_info.plattform.windows.clone(),
+            "macos" => update_info.plattform.macos.clone(),
+            "linux" => update_info.plattform.linux.clone(),
+            "android" => update_info.plattform.android.clone(),
+            _ => String::new(), // 默认情况下处理不支持的系统
+        };
 
-        #[cfg(target_os = "macos")]
-        {
-            download_url = update_info.plattform.macos.clone();
-        }
-
-        #[cfg(target_os = "linux")]
-        {
-            download_url = update_info.plattform.linux.clone();
-        }
-        #[cfg(target_os = "android")]
-        {
-            download_url = update_info.plattform.android.clone();
+        if download_url.is_empty() {
+            return Err(anyhow::anyhow!("获取下载地址失败"));
         }
         let file_name = download_url.split("/").last().unwrap().to_string();
         let updateinfo = UpdateInfo {
