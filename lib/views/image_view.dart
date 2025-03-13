@@ -84,13 +84,13 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
                   isLoading = false;
                 });
                 // ignore: use_build_context_synchronously
-                showErrtDialog(context, "加载图片失败");
+                showErrDialog(context, "加载图片失败");
               },
             );
       }
     } catch (e) {
       // ignore: use_build_context_synchronously
-      showErrtDialog(context, "获取文件夹路径失败：$e");
+      showErrDialog(context, "获取文件夹路径失败：$e");
     }
   }
 

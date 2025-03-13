@@ -52,7 +52,7 @@ class UpdateWorker {
       }
     } catch (e) {
       // ignore: use_build_context_synchronously
-      showErrtDialog(context, "版本检测失败，请检查网络.");
+      showErrDialog(context, "版本检测失败，请检查网络.");
     }
   }
 
@@ -71,7 +71,7 @@ class UpdateWorker {
                   if (Platform.isAndroid)
                     {installApk(context)}
                   else
-                    {showErrtDialog(context, "ios端暂时无法实现")},
+                    {showErrDialog(context, "ios端暂时无法实现")},
                 },
           ),
     );
@@ -83,7 +83,7 @@ class UpdateWorker {
       await AppInstaller.installApk(filePath);
     } catch (e) {
       // ignore: use_build_context_synchronously
-      showErrtDialog(context, "安装apk失败.$e");
+      showErrDialog(context, "安装apk失败.$e");
     }
   }
 

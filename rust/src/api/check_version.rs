@@ -1,6 +1,6 @@
 use crate::frb_generated::StreamSink;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{self, Command};
 use std::{env, fs};
 use tokio::{fs::File, io::AsyncWriteExt as _};
@@ -52,7 +52,6 @@ pub async fn check_update() -> anyhow::Result<Option<UpdateInfo>> {
     let response = reqwest::get(url).await.unwrap().text().await.unwrap();
     let update_info: UpdateInfos = serde_json::from_str(&response)?;
     let current_version = env!("CARGO_PKG_VERSION");
-    let mut info = Some(UpdateInfo::default());
     if update_info.version != current_version {
         let mut download_url = String::new();
         // 根据平台选下载链接
@@ -82,8 +81,7 @@ pub async fn check_update() -> anyhow::Result<Option<UpdateInfo>> {
             file_name,
             date: update_info.date.clone(),
         };
-        info = Some(updateinfo);
-        Ok(info)
+        Ok(Some(updateinfo))
     } else {
         Ok(None)
     }
@@ -183,6 +181,7 @@ pub async fn download_update(
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 async fn unzip_file(zip_path: &Path) -> anyhow::Result<PathBuf> {
     let dest_folder = zip_path.with_extension(""); // 创建一个与 ZIP 同名的文件夹作为解压目录
     if !dest_folder.exists() {
@@ -253,6 +252,7 @@ pub async fn install_update(file_name: String) -> anyhow::Result<()> {
 
     process::exit(0)
 }
+#[cfg(target_os = "macos")]
 async fn launch_update_process(new_zip_path: String) -> anyhow::Result<()> {
     // 解压 ZIP 文件并返回解压后的文件夹路径
     let dest_folder = unzip_file(Path::new(&new_zip_path)).await?;

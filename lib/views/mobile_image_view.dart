@@ -75,6 +75,7 @@ class _MobileImageViewState extends State<MobileImageView> {
         } else if (newStatuses[permission]!.isPermanentlyDenied) {
           // 显示弹窗提示
           showAlertDialog(
+            // ignore: use_build_context_synchronously
             context,
             "权限被永久拒绝",
             "请在系统设置中手动启用${permission.toString()}权限",
@@ -189,15 +190,18 @@ class _MobileImageViewState extends State<MobileImageView> {
                   setState(() {
                     isLoading = false;
                   });
-                  showErrtDialog(context, "加载图片失败: $e");
+                  // ignore: use_build_context_synchronously
+                  showErrDialog(context, "加载图片失败: $e");
                 },
               );
         }
       } catch (e) {
-        showErrtDialog(context, "获取文件夹路径失败：$e");
+        // ignore: use_build_context_synchronously
+        showErrDialog(context, "获取文件夹路径失败：$e");
       }
     } else {
-      showErrtDialog(context, "需要存储权限才能选择文件夹");
+      // ignore: use_build_context_synchronously
+      showErrDialog(context, "需要存储权限才能选择文件夹");
     }
   }
 
