@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-flutter_rust_bridge = "2.9.0"
+flutter_rust_bridge = "=2.9.0"
 anyhow = "1.0.97"
 imagesize = "0.13"
 async-walkdir = {version = "2.1.0"}
