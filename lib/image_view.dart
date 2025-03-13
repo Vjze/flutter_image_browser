@@ -76,9 +76,7 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
 
   Future<void> _pickFolder() async {
     try {
-      // String? folderPath = rust_api.getPath();
       String? folderPath = await FilePicker.platform.getDirectoryPath();
-      print(folderPath);
       if (folderPath != null) {
         // 扫描阶段
         setState(() {
@@ -140,13 +138,11 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
   }
 
   void _previousImage() {
-    print(story.currentIndex.value);
     if (story.currentIndex.value > 0) {
       story.currentIndex.value--;
     } else if (story.currentIndex.value == 0) {
       story.currentIndex.value = story.infos.length - 1;
     }
-    print(story.currentIndex.value);
   }
 
   void _nextImage() {

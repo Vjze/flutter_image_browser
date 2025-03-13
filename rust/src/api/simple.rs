@@ -21,7 +21,7 @@ pub struct ImageInfo {
 }
 struct ScanState {
     should_stop: Arc<AtomicBool>,
-    progress: Arc<Mutex<(usize, usize)>>, // (processed, total)
+    progress: Arc<Mutex<(usize, usize)>>,
 }
 static SCAN_STATE: OnceCell<ScanState> = OnceCell::const_new();
 
@@ -40,15 +40,6 @@ async fn get_scan_state() -> &'static ScanState {
 pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
 }
-
-// #[frb(sync)]
-// pub fn get_path() -> anyhow::Result<String> {
-//     let path = rfd::FileDialog::new().set_title("选择文件夹").pick_folder();
-//     match path {
-//         Some(p) => Ok(p.as_path().display().to_string()),
-//         None => Err(anyhow::anyhow!("未选择文件夹")),
-//     }
-// }
 
 async fn get_image_info(path: String) -> Option<ImageInfo> {
     if let Some(file_name) = Path::new(&path.clone()).file_name() {
@@ -155,7 +146,6 @@ pub async fn list_images(p: String, l: u32, sink: StreamSink<ImageInfo>) -> anyh
         let mut progress = state.progress.lock().unwrap();
         *progress = (processed, total);
     }
-    println!("扫描完成");
     Ok(())
 }
 

@@ -36,11 +36,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   rust_lib_my_app:
     path: rust_builder
-  flutter_rust_bridge: 2.8.0
+  flutter_rust_bridge: 2.9.0
   freezed_annotation: 3.0.0
   get: ^4.7.2
   window_manager: ^0.4.3
-  file_picker: ^9.0.2
+  file_picker: ^9.0.3
   permission_handler: ^11.4.0
   device_info_plus: ^11.3.3
 dev_dependencies:
@@ -55,7 +55,7 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   integration_test:
     sdk: flutter
-  freezed: 3.0.2
+  freezed: 3.0.3
   build_runner: 2.4.15
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
