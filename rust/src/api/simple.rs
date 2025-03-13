@@ -41,14 +41,14 @@ pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
 }
 
-#[frb(sync)]
-pub fn get_path() -> anyhow::Result<String> {
-    let path = rfd::FileDialog::new().set_title("选择文件夹").pick_folder();
-    match path {
-        Some(p) => Ok(p.as_path().display().to_string()),
-        None => Err(anyhow::anyhow!("未选择文件夹")),
-    }
-}
+// #[frb(sync)]
+// pub fn get_path() -> anyhow::Result<String> {
+//     let path = rfd::FileDialog::new().set_title("选择文件夹").pick_folder();
+//     match path {
+//         Some(p) => Ok(p.as_path().display().to_string()),
+//         None => Err(anyhow::anyhow!("未选择文件夹")),
+//     }
+// }
 
 async fn get_image_info(path: String) -> Option<ImageInfo> {
     if let Some(file_name) = Path::new(&path.clone()).file_name() {

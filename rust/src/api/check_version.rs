@@ -1,12 +1,12 @@
 use crate::frb_generated::StreamSink;
-use tokio_stream::StreamExt;
 use serde::{Deserialize, Serialize};
-use std::{env, fs};
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
+use std::{env, fs};
 use tokio::{fs::File, io::AsyncWriteExt as _};
+use tokio_stream::StreamExt;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct UpdateInfo {
     pub version: String,
     pub changelog: String,
@@ -52,26 +52,52 @@ pub async fn check_update() -> anyhow::Result<Option<UpdateInfo>> {
     let response = reqwest::get(url).await?.text().await?;
     let update_info: UpdateInfos = serde_json::from_str(&response)?;
     let current_version = env!("CARGO_PKG_VERSION");
-
+    let mut info = Some(UpdateInfo::default());
     if update_info.version != current_version {
         // 根据平台选下载链接
         #[cfg(target_os = "windows")]
-        let download_url = update_info.plattform.windows.clone();
+        {
+            let download_url = update_info.plattform.windows.clone();
+            let file_name = download_url.split("/").last().unwrap().to_string();
+            let updateinfo = UpdateInfo {
+                version: update_info.version.clone(),
+                changelog: update_info.changelog.clone(),
+                download_url,
+                file_name,
+                date: update_info.date.clone(),
+            };
+            info = Some(updateinfo);
+        }
 
         #[cfg(target_os = "macos")]
-        let download_url = update_info.plattform.macos.clone();
+        {
+            let download_url = update_info.plattform.macos.clone();
+            let file_name = download_url.split("/").last().unwrap().to_string();
+            let updateinfo = UpdateInfo {
+                version: update_info.version.clone(),
+                changelog: update_info.changelog.clone(),
+                download_url,
+                file_name,
+                date: update_info.date.clone(),
+            };
+            info = Some(updateinfo);
+        };
 
         #[cfg(target_os = "linux")]
-        let download_url = update_info.plattform.linux.clone();
-        let file_name = download_url.split("/").last().unwrap().to_string();
-        let updateinfo = UpdateInfo {
-            version: update_info.version.clone(),
-            changelog: update_info.changelog.clone(),
-            download_url,
-            file_name,
-            date: update_info.date.clone(),
-        };
-        Ok(Some(updateinfo))
+        {
+            let download_url = update_info.plattform.linux.clone();
+            let file_name = download_url.split("/").last().unwrap().to_string();
+            let updateinfo = UpdateInfo {
+                version: update_info.version.clone(),
+                changelog: update_info.changelog.clone(),
+                download_url,
+                file_name,
+                date: update_info.date.clone(),
+            };
+            info = Some(updateinfo);
+        }
+
+        Ok(info)
     } else {
         Ok(None)
     }
@@ -109,7 +135,7 @@ pub async fn download_update(
             return Err(e.into());
         }
     };
-    
+
     let total_size = response.content_length().unwrap_or(0);
     let path = std::path::Path::new(&file_path);
 
@@ -191,9 +217,6 @@ async fn unzip_file(zip_path: &Path) -> anyhow::Result<PathBuf> {
     Ok(dest_folder)
 }
 
-
-
-
 pub fn run_installer(installer_path: &str) -> anyhow::Result<()> {
     Command::new(installer_path)
         .spawn()
@@ -206,8 +229,7 @@ pub async fn install_update(file_name: String) -> anyhow::Result<()> {
     let mut file_path = get_downloads_path();
     file_path.push(file_name);
     #[cfg(target_os = "windows")]
-    {   
-        
+    {
         run_installer(&file_path.display().to_string())?;
         let mut cmd = Command::new("taskkill");
         cmd.arg("/F").arg("/IM").arg("my_app.exe").spawn()?.wait()?;
@@ -216,19 +238,22 @@ pub async fn install_update(file_name: String) -> anyhow::Result<()> {
             .arg("start")
             .arg("my_app.exe")
             .spawn()?
-            .wait()?;}
+            .wait()?;
+    }
 
     #[cfg(target_os = "macos")]
-    {  // 启动新的进程来进行替换操作和启动新应用
+    {
+        // 启动新的进程来进行替换操作和启动新应用
         println!("path = {}", file_path.display().to_string());
         // unzip_file(&file_path);
         launch_update_process(file_path).await?;
     }
 
     #[cfg(target_os = "linux")]
-    {   close_old_app()?;
+    {
+        close_old_app()?;
         // replace_appimage(&file_path.display().to_string())?;
-        
+
         let app_path = shellexpand::tilde("~/.local/bin/MyApp.AppImage").to_string();
         Command::new(&app_path).spawn()?.wait()?;
     }
@@ -237,7 +262,7 @@ pub async fn install_update(file_name: String) -> anyhow::Result<()> {
 }
 async fn launch_update_process(new_zip_path: PathBuf) -> anyhow::Result<()> {
     // 解压 ZIP 文件并返回解压后的文件夹路径
-    let dest_folder= unzip_file(Path::new(&new_zip_path)).await?;
+    let dest_folder = unzip_file(Path::new(&new_zip_path)).await?;
 
     // 获取解压后的文件夹路径
     let update_script = dest_folder.join("update.sh");

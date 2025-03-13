@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -24,7 +25,6 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
   final story = Get.find<StoryState>();
   StreamSubscription<rust_api.ImageInfo>? _subscription;
   Timer? _progressTimer;
-
   @override
   void initState() {
     super.initState();
@@ -58,7 +58,7 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
       }
     } catch (e) {
       // ignore: use_build_context_synchronously
-      showAlertDialog(context, "版本检测失败，请检查网络.");
+      showErrtDialog(context, "版本检测失败，请检查网络.");
     }
   }
 
@@ -76,8 +76,10 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
 
   Future<void> _pickFolder() async {
     try {
-      String? folderPath = rust_api.getPath();
-      if (folderPath.isNotEmpty) {
+      // String? folderPath = rust_api.getPath();
+      String? folderPath = await FilePicker.platform.getDirectoryPath();
+      print(folderPath);
+      if (folderPath != null) {
         // 扫描阶段
         setState(() {
           story.infos.clear();
@@ -118,13 +120,13 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
                   isLoading = false;
                 });
                 // ignore: use_build_context_synchronously
-                showAlertDialog(context, "加载图片失败");
+                showErrtDialog(context, "加载图片失败");
               },
             );
       }
     } catch (e) {
       // ignore: use_build_context_synchronously
-      showAlertDialog(context, "获取文件夹路径失败");
+      showErrtDialog(context, "获取文件夹路径失败：$e");
     }
   }
 

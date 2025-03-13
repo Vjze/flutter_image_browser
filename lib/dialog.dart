@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-void showAlertDialog(context, String message) {
+void showErrtDialog(context, String message) {
   showDialog(
     context: context,
     builder:
@@ -13,6 +13,30 @@ void showAlertDialog(context, String message) {
               child: const Text("确定"),
             ),
           ],
+        ),
+  );
+}
+
+void showAlertDialog(
+  BuildContext context,
+  String title,
+  String message, {
+  List<Widget>? actions,
+}) {
+  showDialog(
+    context: context,
+    builder:
+        (context) => AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions:
+              actions ??
+              [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("确定"),
+                ),
+              ],
         ),
   );
 }
