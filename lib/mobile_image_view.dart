@@ -30,9 +30,8 @@ class _MobileImageViewState extends State<MobileImageView> {
 
   @override
   void initState() {
-    if (Platform.isAndroid || Platform.isIOS) {
-      requestPermissions();
-    }
+    requestPermissions();
+
     _pageController = PageController(
       initialPage: story.currentIndex.value,
     ); // 初始化 PageController

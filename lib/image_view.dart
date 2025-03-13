@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:android_intent_plus/flag.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_browser/dialog.dart';
 import 'package:image_browser/download_dialog.dart';
+import 'package:image_browser/main.dart';
 import 'package:image_browser/src/rust/api/check_version.dart';
 import 'package:image_browser/src/rust/api/simple.dart' as rust_api;
 import 'package:image_browser/story.dart';
@@ -69,9 +72,43 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
       builder:
           (_) => DownloadProgressDialog(
             updateInfo: updateInfo,
-            onInstall: () => installUpdate(fileName: story.fileName.value),
+            onInstall:
+                () => {
+                  if (Platform.isAndroid)
+                    {installApk()}
+                  else if (isDesktopPlatform())
+                    {installUpdate(fileName: story.fileName.value)}
+                  else
+                    {showErrtDialog(context, "ios端暂时无法实现")},
+                },
           ),
     );
+  }
+
+  Future<void> installApk() async {
+    String? downloadPath = getDownloadsPath();
+    final fileName = story.fileName.value;
+
+    if (downloadPath.isEmpty) {
+      showErrtDialog(context, "下载路径无效，无法安装 APK.");
+      return;
+    }
+
+    // 规范化路径，确保没有多余的分隔符
+    final apkPath = '$downloadPath/${fileName.trim()}'; // trim() 去除文件名两端的空格
+    final apkFile = File(apkPath);
+
+    if (await apkFile.exists()) {
+      final intent = AndroidIntent(
+        action: 'android.intent.action.VIEW',
+        data: Uri.parse('file://$apkPath').toString(), // 修正 URI 格式
+        type: 'application/vnd.android.package-archive',
+        flags: [Flag.FLAG_ACTIVITY_NEW_TASK],
+      );
+      await intent.launch();
+    } else {
+      showErrtDialog(context, "下载完成，但安装失败，APK 文件未找到: $apkPath");
+    }
   }
 
   Future<void> _pickFolder() async {

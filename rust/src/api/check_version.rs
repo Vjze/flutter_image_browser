@@ -5,7 +5,7 @@ use std::process::{self, Command};
 use std::{env, fs};
 use tokio::{fs::File, io::AsyncWriteExt as _};
 use tokio_stream::StreamExt;
-
+use flutter_rust_bridge::frb;
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct UpdateInfo {
     pub version: String,
@@ -102,7 +102,8 @@ pub async fn check_update() -> anyhow::Result<Option<UpdateInfo>> {
         Ok(None)
     }
 }
-fn get_downloads_path() -> PathBuf {
+#[frb(sync)]
+pub fn get_downloads_path() -> String {
     // 获取当前用户的主目录
     let home_dir = env::var("HOME") // Linux/macOS
         .or_else(|_| env::var("USERPROFILE")) // Windows
@@ -117,7 +118,7 @@ fn get_downloads_path() -> PathBuf {
         fs::create_dir_all(&downloads_path).expect("无法创建 Downloads 文件夹");
     }
 
-    downloads_path
+    downloads_path.as_path().display().to_string()
 }
 // 下载更新文件（带进度回传）
 pub async fn download_update(
@@ -125,8 +126,10 @@ pub async fn download_update(
     file_name: String,
     progress_sink: StreamSink<DownloadEvent>,
 ) -> anyhow::Result<()> {
-    let mut file_path = get_downloads_path();
-    file_path.push(file_name);
+    let file_path = get_downloads_path();
+    let mut fp = PathBuf::new();
+    fp.push(file_path);
+    fp.push(file_name);
     let client = reqwest::Client::new();
     let response = match client.get(&url).send().await {
         Ok(r) => r,
@@ -227,7 +230,9 @@ pub fn run_installer(installer_path: &str) -> anyhow::Result<()> {
 // 安装更新（执行安装包）
 pub async fn install_update(file_name: String) -> anyhow::Result<()> {
     let mut file_path = get_downloads_path();
-    file_path.push(file_name);
+    let mut fp = PathBuf::new();
+    fp.push(file_path);
+    fp.push(file_name);
     #[cfg(target_os = "windows")]
     {
         run_installer(&file_path.display().to_string())?;
@@ -243,8 +248,6 @@ pub async fn install_update(file_name: String) -> anyhow::Result<()> {
 
     #[cfg(target_os = "macos")]
     {
-        // 启动新的进程来进行替换操作和启动新应用
-        println!("path = {}", file_path.display().to_string());
         // unzip_file(&file_path);
         launch_update_process(file_path).await?;
     }
@@ -260,7 +263,7 @@ pub async fn install_update(file_name: String) -> anyhow::Result<()> {
 
     process::exit(0)
 }
-async fn launch_update_process(new_zip_path: PathBuf) -> anyhow::Result<()> {
+async fn launch_update_process(new_zip_path: String) -> anyhow::Result<()> {
     // 解压 ZIP 文件并返回解压后的文件夹路径
     let dest_folder = unzip_file(Path::new(&new_zip_path)).await?;
 
