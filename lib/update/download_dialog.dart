@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:image_browser/main.dart';
 import 'package:image_browser/src/rust/api/check_version.dart';
 import 'package:image_browser/story.dart';
-import 'package:image_browser/update/updateWork.dart';
+import 'package:image_browser/update/updatework.dart';
 
 class DownloadProgressDialog extends StatefulWidget {
   final UpdateInfo updateInfo;

@@ -7,7 +7,7 @@ import 'package:get/get.dart';
 import 'package:image_browser/views/dialog.dart';
 import 'package:image_browser/src/rust/api/simple.dart' as rust_api;
 import 'package:image_browser/story.dart';
-import 'package:image_browser/update/updateWork.dart';
+import 'package:image_browser/update/updatework.dart';
 
 class ImageBrowserPage extends StatefulWidget {
   const ImageBrowserPage({super.key});
@@ -47,7 +47,6 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
         // 扫描阶段
         setState(() {
           story.infos.clear();
-          ;
           story.currentIndex.value = 0;
           isScanning = true;
           isLoading = false;

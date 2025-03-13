@@ -8,7 +8,7 @@ import 'package:image_browser/views/dialog.dart';
 import 'package:image_browser/src/rust/api/simple.dart' as rust_api;
 import 'package:image_browser/story.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:image_browser/update/updateWork.dart';
+import 'package:image_browser/update/updatework.dart';
 
 class MobileImageView extends StatefulWidget {
   const MobileImageView({super.key});
@@ -97,6 +97,7 @@ class _MobileImageViewState extends State<MobileImageView> {
         } else {
           // 显示弹窗提示
           showAlertDialog(
+            // ignore: use_build_context_synchronously
             context,
             "权限被拒绝",
             "${permission.toString()}权限被拒绝，无法正常使用图片浏览功能",
@@ -112,6 +113,7 @@ class _MobileImageViewState extends State<MobileImageView> {
       } else if (status.isPermanentlyDenied) {
         // 显示弹窗提示
         showAlertDialog(
+          // ignore: use_build_context_synchronously
           context,
           "权限被永久拒绝",
           "请在系统设置中手动启用${permission.toString()}权限",
