@@ -144,21 +144,21 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
         child: Column(
           children: [
             Expanded(
-              child: InteractiveViewer(
-                panEnabled: true,
-                boundaryMargin: const EdgeInsets.all(20),
-                minScale: 0.5,
-                maxScale: 10.0,
-                child: Center(
-                  child:
-                      story.infos.isEmpty
-                          ? const Text('请选择文件夹加载图片')
-                          : Image.file(
+              child:
+                  story.infos.isEmpty
+                      ? const Text('请选择文件夹加载图片')
+                      : InteractiveViewer(
+                        panEnabled: true,
+                        boundaryMargin: const EdgeInsets.all(20),
+                        minScale: 0.5,
+                        maxScale: 10.0,
+                        child: Center(
+                          child: Image.file(
                             File(story.infos[story.currentIndex.value].path),
                             fit: BoxFit.contain,
                           ),
-                ),
-              ),
+                        ),
+                      ),
             ),
             Container(
               height: 50,
