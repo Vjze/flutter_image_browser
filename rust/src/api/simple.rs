@@ -43,14 +43,14 @@ pub fn init_app() {
 
 async fn get_image_info(path: String) -> Option<ImageInfo> {
     if let Some(file_name) = Path::new(&path.clone()).file_name() {
-        if let Some(name) = file_name.to_str() {
+        if let Some(name) = file_name.to_str().to_String() {
             match imagesize::size(path.clone()) {
                 Ok(size) => {
                     let width = size.width;
                     let height = size.height;
                     Some(ImageInfo {
                         path,
-                        name: name.to_string(),
+                        name,
                         width,
                         height,
                     })
@@ -79,8 +79,8 @@ pub async fn scan_images(p: String) -> anyhow::Result<u32> {
                 }
             }
             Err(e) => {
-                eprintln!("扫描错误: {}", e);
                 break;
+                return Err(e);
             }
         }
     }
