@@ -9,9 +9,21 @@
     <application
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
+        android:enableOnBackInvokedCallback="true"
         android:label="my_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <provider
+                android:name="androidx.core.content.FileProvider"
+                android:authorities="${applicationId}.fileProvider"
+                android:exported="false"
+                android:grantUriPermissions="true"
+                tools:replace="android:authorities">
+            <meta-data
+                    android:name="android.support.FILE_PROVIDER_PATHS"
+                    android:resource="@xml/filepaths"
+                    tools:replace="android:resource" />
+        </provider>
         <activity
             android:name=".MainActivity"
             android:exported="true"

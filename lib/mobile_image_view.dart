@@ -1,16 +1,17 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:android_intent_plus/flag.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_browser/dialog.dart';
-import 'package:image_browser/download_dialog.dart';
 import 'package:image_browser/src/rust/api/check_version.dart';
 import 'package:image_browser/src/rust/api/simple.dart' as rust_api;
 import 'package:image_browser/story.dart';
-import 'package:image_browser/updata_dialog.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:image_browser/update/getdowmloadpath.dart';
 
 class MobileImageView extends StatefulWidget {
   const MobileImageView({super.key});
@@ -27,7 +28,6 @@ class _MobileImageViewState extends State<MobileImageView> {
   Timer? _progressTimer;
   late PageController _pageController; // 添加 PageController
   double _scale = 1.0;
-
   @override
   void initState() {
     requestPermissions();
@@ -36,7 +36,6 @@ class _MobileImageViewState extends State<MobileImageView> {
       initialPage: story.currentIndex.value,
     ); // 初始化 PageController
     super.initState();
-    _checkForUpdate();
   }
 
   @override
@@ -135,38 +134,6 @@ class _MobileImageViewState extends State<MobileImageView> {
         break;
       } else if (!status.isGranted) {}
     }
-  }
-
-  Future<void> _checkForUpdate() async {
-    try {
-      final updateInfo = await checkUpdate();
-      if (updateInfo != null) {
-        showDialog(
-          // ignore: use_build_context_synchronously
-          context: context,
-          builder:
-              (_) => UpdateDialog(
-                updateInfo: updateInfo,
-                onDownload: () => _showDownloadDialog(updateInfo),
-              ),
-        );
-      }
-    } catch (e) {
-      // ignore: use_build_context_synchronously
-      showErrtDialog(context, "版本检测失败，请检查网络.");
-    }
-  }
-
-  void _showDownloadDialog(UpdateInfo updateInfo) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (_) => DownloadProgressDialog(
-            updateInfo: updateInfo,
-            onInstall: () => installUpdate(fileName: story.fileName.value),
-          ),
-    );
   }
 
   Future<void> _pickFolder() async {
@@ -306,6 +273,9 @@ class _MobileImageViewState extends State<MobileImageView> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  FloatingActionButton(
+                    onPressed: () => {UpdateWorker.installApk(context)},
+                  ),
                   // 扫描或加载时显示进度，否则显示分辨率
                   if (isScanning || isLoading)
                     FutureBuilder<double>(

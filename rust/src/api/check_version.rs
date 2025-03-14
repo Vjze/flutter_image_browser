@@ -5,7 +5,6 @@ use std::process::{self, Command};
 use std::{env, fs};
 use tokio::{fs::File, io::AsyncWriteExt as _};
 use tokio_stream::StreamExt;
-use flutter_rust_bridge::frb;
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct UpdateInfo {
     pub version: String,
@@ -29,6 +28,7 @@ pub struct Platform {
     pub windows: String,
     pub macos: String,
     pub linux: String,
+    pub android: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -48,62 +48,49 @@ pub enum DownloadEvent {
 
 // 获取更新信息
 pub async fn check_update() -> anyhow::Result<Option<UpdateInfo>> {
-    let url = "http://tingan.sbs/latest.json"; // 你的版本信息地址
-    let response = reqwest::get(url).await?.text().await?;
+    let url = "http://tingan.sbs/latest.json";
+    let response = reqwest::get(url).await.unwrap().text().await.unwrap();
     let update_info: UpdateInfos = serde_json::from_str(&response)?;
     let current_version = env!("CARGO_PKG_VERSION");
     let mut info = Some(UpdateInfo::default());
     if update_info.version != current_version {
+        let mut download_url = String::new();
         // 根据平台选下载链接
         #[cfg(target_os = "windows")]
         {
-            let download_url = update_info.plattform.windows.clone();
-            let file_name = download_url.split("/").last().unwrap().to_string();
-            let updateinfo = UpdateInfo {
-                version: update_info.version.clone(),
-                changelog: update_info.changelog.clone(),
-                download_url,
-                file_name,
-                date: update_info.date.clone(),
-            };
-            info = Some(updateinfo);
+            download_url = update_info.plattform.windows.clone();
         }
 
         #[cfg(target_os = "macos")]
         {
-            let download_url = update_info.plattform.macos.clone();
-            let file_name = download_url.split("/").last().unwrap().to_string();
-            let updateinfo = UpdateInfo {
-                version: update_info.version.clone(),
-                changelog: update_info.changelog.clone(),
-                download_url,
-                file_name,
-                date: update_info.date.clone(),
-            };
-            info = Some(updateinfo);
-        };
+            download_url = update_info.plattform.macos.clone();
+        }
 
         #[cfg(target_os = "linux")]
         {
-            let download_url = update_info.plattform.linux.clone();
-            let file_name = download_url.split("/").last().unwrap().to_string();
-            let updateinfo = UpdateInfo {
-                version: update_info.version.clone(),
-                changelog: update_info.changelog.clone(),
-                download_url,
-                file_name,
-                date: update_info.date.clone(),
-            };
-            info = Some(updateinfo);
+            download_url = update_info.plattform.linux.clone();
         }
-
+        #[cfg(target_os = "android")]
+        {
+            download_url = update_info.plattform.android.clone();
+        }
+        let file_name = download_url.split("/").last().unwrap().to_string();
+        let updateinfo = UpdateInfo {
+            version: update_info.version.clone(),
+            changelog: update_info.changelog.clone(),
+            download_url,
+            file_name,
+            date: update_info.date.clone(),
+        };
+        info = Some(updateinfo);
+        println!("{:?}", info);
         Ok(info)
     } else {
         Ok(None)
     }
 }
-#[frb(sync)]
-pub fn get_downloads_path() -> String {
+
+fn get_downloads_path() -> PathBuf {
     // 获取当前用户的主目录
     let home_dir = env::var("HOME") // Linux/macOS
         .or_else(|_| env::var("USERPROFILE")) // Windows
@@ -118,7 +105,7 @@ pub fn get_downloads_path() -> String {
         fs::create_dir_all(&downloads_path).expect("无法创建 Downloads 文件夹");
     }
 
-    downloads_path.as_path().display().to_string()
+    downloads_path
 }
 // 下载更新文件（带进度回传）
 pub async fn download_update(
@@ -126,10 +113,17 @@ pub async fn download_update(
     file_name: String,
     progress_sink: StreamSink<DownloadEvent>,
 ) -> anyhow::Result<()> {
-    let file_path = get_downloads_path();
-    let mut fp = PathBuf::new();
-    fp.push(file_path);
-    fp.push(file_name);
+    let file_path =
+        if env::consts::OS == "macos" || env::consts::OS == "linux" || env::consts::OS == "windows"
+        {
+            let mut file_path = get_downloads_path();
+            file_path.push(&file_name);
+            file_path
+        } else {
+            let mut file_path = PathBuf::new();
+            file_path.push(&file_name);
+            file_path
+        };
     let client = reqwest::Client::new();
     let response = match client.get(&url).send().await {
         Ok(r) => r,
@@ -141,7 +135,8 @@ pub async fn download_update(
 
     let total_size = response.content_length().unwrap_or(0);
     let path = std::path::Path::new(&file_path);
-
+    println!("file_name: {}", file_name);
+    println!("{:?}", path);
     let mut file = match File::create(&path).await {
         Ok(f) => f,
         Err(e) => {
@@ -230,9 +225,7 @@ pub fn run_installer(installer_path: &str) -> anyhow::Result<()> {
 // 安装更新（执行安装包）
 pub async fn install_update(file_name: String) -> anyhow::Result<()> {
     let mut file_path = get_downloads_path();
-    let mut fp = PathBuf::new();
-    fp.push(file_path);
-    fp.push(file_name);
+    file_path.push(file_name);
     #[cfg(target_os = "windows")]
     {
         run_installer(&file_path.display().to_string())?;
@@ -249,7 +242,7 @@ pub async fn install_update(file_name: String) -> anyhow::Result<()> {
     #[cfg(target_os = "macos")]
     {
         // unzip_file(&file_path);
-        launch_update_process(file_path).await?;
+        launch_update_process(file_path.display().to_string()).await?;
     }
 
     #[cfg(target_os = "linux")]
