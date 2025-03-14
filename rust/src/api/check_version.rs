@@ -83,7 +83,6 @@ pub async fn check_update() -> anyhow::Result<Option<UpdateInfo>> {
             date: update_info.date.clone(),
         };
         info = Some(updateinfo);
-        println!("{:?}", info);
         Ok(info)
     } else {
         Ok(None)
