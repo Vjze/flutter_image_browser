@@ -135,8 +135,6 @@ pub async fn download_update(
 
     let total_size = response.content_length().unwrap_or(0);
     let path = std::path::Path::new(&file_path);
-    println!("file_name: {}", file_name);
-    println!("{:?}", path);
     let mut file = match File::create(&path).await {
         Ok(f) => f,
         Err(e) => {

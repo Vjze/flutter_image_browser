@@ -3,7 +3,7 @@ import 'package:app_installer/app_installer.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:image_browser/dialog.dart';
+import 'package:image_browser/views/dialog.dart';
 import 'package:image_browser/main.dart';
 import 'package:image_browser/src/rust/api/check_version.dart';
 import 'package:image_browser/story.dart';
