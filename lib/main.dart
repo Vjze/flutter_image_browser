@@ -9,7 +9,6 @@ import 'package:image_browser/mobile_image_view.dart';
 import 'package:image_browser/src/rust/frb_generated.dart';
 import 'package:image_browser/story.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:image_browser/update/getdowmloadpath.dart';
 
 Future<void> main() async {
   // 初始化 FRB
@@ -47,23 +46,8 @@ Future<void> setWindowSizeForDesktop() async {
   await windowManager.center(); // 将窗口居中显示
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   // 延迟检查更新，避免启动时阻塞
-  //   Future.delayed(Duration(seconds: 2), () {
-  //     if (mounted) {
-  //       UpdateWorker.checkForUpdate(context);
-  //     }
-  //   });
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -74,17 +58,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: Builder(
-        builder: (BuildContext context) {
-          // 在 MaterialApp 的 widget 树构建完成后执行检查
-          Future.delayed(Duration(seconds: 2), () {
-            if (context.mounted) {
-              UpdateWorker.checkForUpdate(context);
-            }
-          });
-          return isDesktopPlatform() ? DesktopHome() : MobileHome();
-        },
-      ),
+      home: isDesktopPlatform() ? DesktopHome() : MobileHome(),
     );
   }
 }

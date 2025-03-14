@@ -1,13 +1,10 @@
 import 'dart:async';
-import 'dart:io';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_browser/main.dart';
 import 'package:image_browser/src/rust/api/check_version.dart';
 import 'package:image_browser/story.dart';
-import 'package:image_browser/update/getdowmloadpath.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:image_browser/update/updateWork.dart';
 
 class DownloadProgressDialog extends StatefulWidget {
   final UpdateInfo updateInfo;
@@ -74,7 +71,7 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
       fileName:
           isDesktopPlatform()
               ? story.fileName.value
-              : await Getdowmloadpath.getPath(),
+              : await UpdateWorker.getPath(),
     ).listen(
       (event) {
         if (event is DownloadEvent_Progress) {

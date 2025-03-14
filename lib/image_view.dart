@@ -5,11 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_browser/dialog.dart';
-import 'package:image_browser/update/download_dialog.dart';
-import 'package:image_browser/src/rust/api/check_version.dart';
 import 'package:image_browser/src/rust/api/simple.dart' as rust_api;
 import 'package:image_browser/story.dart';
-import 'package:image_browser/update/updata_dialog.dart';
+import 'package:image_browser/update/updateWork.dart';
 
 class ImageBrowserPage extends StatefulWidget {
   const ImageBrowserPage({super.key});
@@ -31,6 +29,7 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
+    UpdateWorker.checkForUpdate(context);
   }
 
   @override

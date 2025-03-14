@@ -1,7 +1,5 @@
 import 'dart:io';
-
-import 'package:android_intent_plus/android_intent.dart';
-import 'package:android_intent_plus/flag.dart';
+import 'package:app_installer/app_installer.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -11,10 +9,9 @@ import 'package:image_browser/src/rust/api/check_version.dart';
 import 'package:image_browser/story.dart';
 import 'package:image_browser/update/download_dialog.dart';
 import 'package:image_browser/update/updata_dialog.dart';
-import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 
-class Getdowmloadpath {
+class UpdateWorker {
   static Future<String> getPath() async {
     final story = Get.find<StoryState>();
     final fileName = story.fileName.value;
@@ -32,9 +29,7 @@ class Getdowmloadpath {
       return apkPath;
     }
   }
-}
 
-class UpdateWorker {
   static Future<void> checkForUpdate(BuildContext context) async {
     final story = Get.find<StoryState>();
     try {
@@ -83,31 +78,14 @@ class UpdateWorker {
   }
 
   static Future<void> installApk(BuildContext context) async {
-    String? filePath = await Getdowmloadpath.getPath();
+    String? filePath = await getPath();
     try {
-      final result = await OpenFile.open(filePath);
-      if (result.type != ResultType.done) {
-        throw Exception("Failed to open APK: ${result.message}");
-      }
+      await AppInstaller.installApk(filePath);
     } catch (e) {
-      print("安装失败: $e");
-      rethrow;
+      // ignore: use_build_context_synchronously
+      showErrtDialog(context, "安装apk失败.$e");
     }
   }
-  // if (filePath.isEmpty) {
-  //   showErrtDialog(context, "下载路径无效，无法安装 APK.");
-  //   return;
-  // }
-  // print("filePath: " + filePath);
-
-  // final intent = AndroidIntent(
-  //   action: 'android.intent.action.VIEW',
-  //   data: Uri.parse('file://$filePath').toString(), // 修正 URI 格式
-  //   type: 'application/vnd.android.package-archive',
-  //   flags: [Flag.FLAG_ACTIVITY_NEW_TASK],
-  // );
-  // await intent.launch();
-  // }
 
   static void _showDownloadDialog(UpdateInfo updateInfo, BuildContext context) {
     final story = Get.find<StoryState>();
