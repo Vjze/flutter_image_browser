@@ -270,9 +270,6 @@ class _MobileImageViewState extends State<MobileImageView> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  FloatingActionButton(
-                    onPressed: () => {UpdateWorker.installApk(context)},
-                  ),
                   // 扫描或加载时显示进度，否则显示分辨率
                   if (isScanning || isLoading)
                     FutureBuilder<double>(
