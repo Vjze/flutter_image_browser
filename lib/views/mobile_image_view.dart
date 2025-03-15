@@ -155,48 +155,46 @@ class _MobileImageViewState extends State<MobileImageView> {
     if (hasPermission) {
       try {
         String? folderPath = await FilePicker.platform.getDirectoryPath();
-        if (folderPath != null) {
-          setState(() {
-            story.infos.clear();
-            story.currentIndex.value = 0;
-            isScanning = true;
-            isLoading = false;
-          });
+        setState(() {
+          story.infos.clear();
+          story.currentIndex.value = 0;
+          isScanning = true;
+          isLoading = false;
+        });
 
-          final totalImages = await rust_api.scanImages(p: folderPath);
-          story.totalImages.value = totalImages;
-          setState(() {
-            isScanning = false;
-            isLoading = true;
-          });
+        final totalImages = await rust_api.scanImages(p: folderPath!);
+        story.totalImages.value = totalImages;
+        setState(() {
+          isScanning = false;
+          isLoading = true;
+        });
 
-          _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (
-            timer,
-          ) {
-            setState(() {});
-          });
-          _subscription = rust_api
-              .listImages(p: folderPath, l: totalImages)
-              .listen(
-                (image) {
-                  story.infos.add(image);
-                },
-                onDone: () {
-                  _progressTimer?.cancel();
-                  setState(() {
-                    isLoading = false;
-                  });
-                },
-                onError: (e) {
-                  _progressTimer?.cancel();
-                  setState(() {
-                    isLoading = false;
-                  });
-                  // ignore: use_build_context_synchronously
-                  showErrDialog(context, "加载图片失败: $e");
-                },
-              );
-        }
+        _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (
+          timer,
+        ) {
+          setState(() {});
+        });
+        _subscription = rust_api
+            .listImages(p: folderPath, l: totalImages)
+            .listen(
+              (image) {
+                story.infos.add(image);
+              },
+              onDone: () {
+                _progressTimer?.cancel();
+                setState(() {
+                  isLoading = false;
+                });
+              },
+              onError: (e) {
+                _progressTimer?.cancel();
+                setState(() {
+                  isLoading = false;
+                });
+                // ignore: use_build_context_synchronously
+                showErrDialog(context, "加载图片失败: $e");
+              },
+            );
       } catch (e) {
         // ignore: use_build_context_synchronously
         showErrDialog(context, "获取文件夹路径失败：$e");

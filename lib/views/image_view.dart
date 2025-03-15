@@ -43,50 +43,48 @@ class _ImageBrowserPageState extends State<ImageBrowserPage> {
   Future<void> _pickFolder() async {
     try {
       String? folderPath = await FilePicker.platform.getDirectoryPath();
-      if (folderPath != null) {
-        // 扫描阶段
-        setState(() {
-          story.infos.clear();
-          story.currentIndex.value = 0;
-          isScanning = true;
-          isLoading = false;
-        });
+      // 扫描阶段
+      setState(() {
+        story.infos.clear();
+        story.currentIndex.value = 0;
+        isScanning = true;
+        isLoading = false;
+      });
 
-        final totalImages = await rust_api.scanImages(p: folderPath);
-        story.totalImages.value = totalImages;
-        setState(() {
-          isScanning = false;
-          isLoading = true;
-        });
+      final totalImages = await rust_api.scanImages(p: folderPath!);
+      story.totalImages.value = totalImages;
+      setState(() {
+        isScanning = false;
+        isLoading = true;
+      });
 
-        // 加载阶段
-        _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (
-          timer,
-        ) {
-          setState(() {});
-        });
-        _subscription = rust_api
-            .listImages(p: folderPath, l: totalImages)
-            .listen(
-              (image) {
-                story.infos.add(image);
-              },
-              onDone: () {
-                _progressTimer?.cancel();
-                setState(() {
-                  isLoading = false;
-                });
-              },
-              onError: (e) {
-                _progressTimer?.cancel();
-                setState(() {
-                  isLoading = false;
-                });
-                // ignore: use_build_context_synchronously
-                showErrDialog(context, "加载图片失败");
-              },
-            );
-      }
+      // 加载阶段
+      _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (
+        timer,
+      ) {
+        setState(() {});
+      });
+      _subscription = rust_api
+          .listImages(p: folderPath, l: totalImages)
+          .listen(
+            (image) {
+              story.infos.add(image);
+            },
+            onDone: () {
+              _progressTimer?.cancel();
+              setState(() {
+                isLoading = false;
+              });
+            },
+            onError: (e) {
+              _progressTimer?.cancel();
+              setState(() {
+                isLoading = false;
+              });
+              // ignore: use_build_context_synchronously
+              showErrDialog(context, "加载图片失败");
+            },
+          );
     } catch (e) {
       // ignore: use_build_context_synchronously
       showErrDialog(context, "获取文件夹路径失败：$e");

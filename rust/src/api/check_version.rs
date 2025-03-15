@@ -1,6 +1,6 @@
 use crate::frb_generated::StreamSink;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{PathBuf,Path};
 use std::process::{self, Command};
 use std::{env, fs};
 use tokio::{fs::File, io::AsyncWriteExt as _};
@@ -175,6 +175,9 @@ pub async fn download_update(
 
 #[cfg(target_os = "macos")]
 async fn unzip_file(zip_path: &Path) -> anyhow::Result<PathBuf> {
+    
+
+
     let dest_folder = zip_path.with_extension(""); // 创建一个与 ZIP 同名的文件夹作为解压目录
     if !dest_folder.exists() {
         fs::create_dir_all(&dest_folder)?;
